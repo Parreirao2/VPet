@@ -2,14 +2,16 @@
 
 A modern desktop Tamagotchi-style virtual pet that lives on your computer screen. Take care of your pet as it grows from a baby to an adult through various life stages! Feed it, play with it, and watch it thrive in this delightful virtual companion experience.
 
-<img src="frames/Baby_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+
 (Baby)
-<img src="frames/Child_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+<img src="frames/Baby_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
 (Child)
-<img src="frames/Teen_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+<img src="frames/Child_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
 (Teen)
-<img src="frames/Adult_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+<img src="frames/Teen_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
 (Adult)
+<img src="frames/Adult_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+
 
 
 ## ✨ Features
