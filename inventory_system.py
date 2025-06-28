@@ -1,12 +1,3 @@
-"""Inventory System Module
-
-This module handles the pet's inventory system, including:
-- Item storage and management
-- Item selection and usage
-- UI for displaying and interacting with inventory
-- Integration with other systems like poop cleaning
-"""
-
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
@@ -14,8 +5,6 @@ import os
 from unified_ui import COLORS
 
 class InventoryItem:
-    """Represents an item in the inventory"""
-    
     def __init__(self, name, image_path, description, quantity=1, max_quantity=99):
         self.name = name
         self.image_path = image_path
@@ -27,7 +16,6 @@ class InventoryItem:
         self.selected = False
         
     def load_image(self, size=(32, 32)):
-        """Load the item's image"""
         try:
             img = Image.open(self.image_path).convert("RGBA")
             img = img.resize(size, Image.LANCZOS)
@@ -51,7 +39,6 @@ class InventoryItem:
                 btn["qty_label"].config(text=f"x{self.items[item_id].quantity}")
     
     def use(self):
-        """Use the item, reducing its quantity"""
         if self.quantity > 0:
             self.quantity -= 1
             return True
@@ -71,12 +58,9 @@ class InventoryItem:
                 btn["qty_label"].config(text=f"x{self.items[item_id].quantity}")
     
     def add(self, amount=1):
-        """Add more of this item to inventory"""
         self.quantity = min(self.max_quantity, self.quantity + amount)
 
 class InventorySystem:
-    """Manages the pet's inventory of items"""
-    
     def __init__(self, root, canvas, pet_state):
         self.root = root
         self.canvas = canvas
@@ -100,7 +84,6 @@ class InventorySystem:
         self.load_default_items()
     
     def load_default_items(self):
-        """Load default inventory items"""
         try:
             img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img_assets')
             

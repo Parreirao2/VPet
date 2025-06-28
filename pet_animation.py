@@ -1,12 +1,3 @@
-"""Pet Animation Module
-
-This module contains the animation and movement logic for the virtual pet system, including:
-- Loading and displaying animation frames
-- Pet movement across the screen
-- Animation state management
-- Direction handling
-"""
-
 import tkinter as tk
 from PIL import Image, ImageTk
 import os
@@ -15,7 +6,7 @@ import random
 from datetime import datetime
 
 class PetAnimation:
-    """Manages pet animations and movement"""
+
     
     def __init__(self, root, canvas, pet_state, settings):
         self.root = root
@@ -23,121 +14,121 @@ class PetAnimation:
         self.pet_state = pet_state
         self.settings = settings
         
-        # Initialize animation frames dictionary
+
         self.animations = {}
         
-        # Initialize movement variables
+
         self.movement_timer = None
         self.movement_step_timer = None
         self.resume_timer = None
         self.target_x = None
         self.target_y = None
         
-        # Sickness indicator
+
         self.sickness_icon = None
         self.sickness_icon_id = None
         self.sickness_blink_timer = None
         self.sickness_visible = True
         
-        # Register callback for sickness status changes
+
         if hasattr(self.pet_state, 'stats'):
             self.pet_state.stats.on_sickness_changed = self.update_sickness_display
         
-        # Register callback for stage changes
+
         if hasattr(self.pet_state, 'growth'):
             self.pet_state.growth.on_stage_changed = self.handle_stage_change
         
-        # Load initial animation frames
+
         self.load_animations()
         
-        # Start animation loop
+
         self.animate()
         
     def handle_stage_change(self, old_stage, new_stage):
-        """Handle pet stage change by reloading animations"""
+
         print(f"Pet evolved from {old_stage} to {new_stage}, reloading animations")
-        # Clear existing animations cache
+
         self.animations = {}
-        # Reload animations with new stage
+
         self.load_animations()
     
     def handle_color_change(self, old_color, new_color):
-        """Handle pet color change by reloading animations while preserving direction"""
+
         print(f"Pet color changed from {old_color} to {new_color}, reloading animations")
-        # Store current direction before reloading animations
+
         current_direction = self.pet_state.direction
         
-        # Clear existing animations cache
+
         self.animations = {}
         
-        # Reload animations with new color
+
         self.load_animations()
         
-        # Restore direction
+
         self.pet_state.direction = current_direction
     
     def load_animations(self):
-        """Load animation frames for current pet stage"""
+
         self.animations = {}
         base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frames')
         
-        # Get pet color from settings
+
         pet_color = self.settings.get('pet_color', 'black').lower()
         
-        # Define all possible animation states
+
         all_states = ['Walk1', 'Walk2', 'Happy', 'Sleep1', 'Sleep2',
                      'Eat1', 'Eat2', 'Attack', 'Angry', 'Lose1', 'Refuse']
         
-        # Create a mapping for fallback frames to reduce warnings
+
         fallback_map = {
             'Sleep2': 'Sleep1',  # Use Sleep1 as fallback for Sleep2
             'Refuse': 'Angry'    # Use Angry as fallback for Refuse
         }
         
-        # Load all animations for current stage
+
         for state in all_states:
             try:
-                # Determine file path based on color
+
                 img_path = None
                 
                 if pet_color == 'black':
-                    # Default black pet (no suffix)
+
                     img_path = os.path.join(base_path, f'{self.pet_state.stage}_{state}.png')
                     if not os.path.exists(img_path):
-                        # Try alternate case for black pet
+    
                         img_path = os.path.join(base_path, f'{self.pet_state.stage.lower()}_{state}.png')
                 else:
-                    # Try multiple filename patterns for colored pets
+
                     possible_paths = [
-                        # Original case with stage as is
+
                         os.path.join(base_path, f'{self.pet_state.stage}_{state}_{pet_color}.png'),
-                        # Lowercase stage
+
                         os.path.join(base_path, f'{self.pet_state.stage.lower()}_{state}_{pet_color}.png'),
-                        # Uppercase stage
+
                         os.path.join(base_path, f'{self.pet_state.stage.upper()}_{state}_{pet_color}.png'),
-                        # Try with lowercase state
+
                         os.path.join(base_path, f'{self.pet_state.stage}_{state.lower()}_{pet_color}.png'),
-                        # Try with uppercase state
+
                         os.path.join(base_path, f'{self.pet_state.stage}_{state.upper()}_{pet_color}.png'),
-                        # Try lowercase stage and state
+
                         os.path.join(base_path, f'{self.pet_state.stage.lower()}_{state.lower()}_{pet_color}.png')
                     ]
                     
-                    # Find the first path that exists
+
                     for path in possible_paths:
                         if os.path.exists(path):
                             img_path = path
                             break
                 
-                # If no specific variant found, try fallbacks
+
                 if img_path is None or not os.path.exists(img_path):
-                    # Try fallback to default black pet
+
                     fallback_paths = [
-                        # Standard case
+
                         os.path.join(base_path, f'{self.pet_state.stage}_{state}.png'),
-                        # Lowercase stage
+
                         os.path.join(base_path, f'{self.pet_state.stage.lower()}_{state}.png'),
-                        # Uppercase stage
+
                         os.path.join(base_path, f'{self.pet_state.stage.upper()}_{state}.png')
                     ]
                     
@@ -148,10 +139,10 @@ class PetAnimation:
                                 print(f"Using default black variant for {state} as {pet_color} variant not found")
                             break
                 
-                # If still no image found, try to use a fallback animation frame
+
                 if (img_path is None or not os.path.exists(img_path)) and state in fallback_map:
                     fallback_state = fallback_map[state]
-                    # Try to use the fallback frame with the same color
+
                     if pet_color != 'black':
                         fallback_paths = [
                             os.path.join(base_path, f'{self.pet_state.stage}_{fallback_state}_{pet_color}.png'),
@@ -169,27 +160,27 @@ class PetAnimation:
                             # Don't print fallback message to reduce console spam
                             break
                 
-                # Load the image if a valid path was found
+
                 if img_path and os.path.exists(img_path):
                     image = Image.open(img_path)
-                    # Resize the image based on pet_size setting (100 = 4x original size)
+
                     size_factor = 4 * (self.settings['pet_size'] / 100)
                     resized_image = image.resize((int(image.width * size_factor), int(image.height * size_factor)), Image.LANCZOS)
                     
-                    # Don't flip the image during initial loading
+
                     # Direction flipping will be handled in the animate method
                     self.animations[state] = ImageTk.PhotoImage(resized_image)
                 else:
-                    # Only print warning for missing frames if they're essential
+
                     essential_frames = ['Walk1', 'Walk2', 'Happy']
                     if state in essential_frames:
                         print(f"Warning: Essential animation frame not found for {self.pet_state.stage}_{state}")
             except Exception as e:
                 print(f'Error loading animation frame {state}: {e}')
-                # Continue to next frame rather than failing completely
+
     
     def load_sickness_icon(self):
-        """Load the sickness icon image"""
+
         try:
             img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img_assets', 'sickness.png')
             if os.path.exists(img_path):

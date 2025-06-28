@@ -1,12 +1,3 @@
-"""Poop System Module
-
-This module handles the pet's pooping behavior, including:
-- Random poop generation during pet movement
-- Displaying poops on the screen
-- Cleaning mechanism for removing poops
-- Effects of uncleaned poops on pet stats
-"""
-
 import tkinter as tk
 from PIL import Image, ImageTk
 import os
@@ -14,23 +5,23 @@ import random
 from datetime import datetime, timedelta
 
 class PoopSystem:
-    """Manages pet poop generation, display and cleaning"""
+
     
     def __init__(self, root, canvas, pet_state):
         self.root = root
         self.canvas = canvas
         self.pet_state = pet_state
         
-        # List to track all poops on screen
+
         self.poops = []
         
-        # Load poop images
+
         self.poop_images = []
         self.toilet_paper_image = None
         self.load_images()
         
-        # Poop generation settings
-        # Get poop frequency from pet_manager settings if available
+
+
         if hasattr(pet_state, 'pet_manager') and hasattr(pet_state.pet_manager, 'settings'):
             self.poop_chance = pet_state.pet_manager.settings.get('poop_frequency', 0.1)  # Increased default from 0.1 to 5.0
         else:
@@ -38,18 +29,18 @@ class PoopSystem:
         self.last_poop_time = datetime.now()
         self.min_poop_interval = random.randint(300, 900)  # Reduced from 300-900 to 10-30 seconds
         
-        # Food consumption tracking for poop generation
+
         self.food_consumed = 0
         self.food_poop_multiplier = 0.05  # Each food item increases poop chance by 5%
         
-        # Cleaning mode variables
+
         self.cleaning_mode = False
         self.original_cursor = None
         
-        # Track uncleaned poops effect
+
         self.poop_check_timer = None
         
-        # Animation timer for poops
+
         self.poop_animation_timer = None
         self.start_poop_animation()
         
@@ -60,43 +51,43 @@ class PoopSystem:
         
         self.start_poop_check_timer()
         
-        # Debug message to confirm initialization
+
         print(f"Poop system initialized with chance: {self.poop_chance}%, interval: {self.min_poop_interval}s")
     
     def load_images(self):
-        """Load poop and toilet paper images"""
+
         try:
             img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img_assets')
             
-            # Load poop images
+
             poop1 = Image.open(os.path.join(img_path, 'poop1.png')).convert("RGBA")
             poop2 = Image.open(os.path.join(img_path, 'poop2.png')).convert("RGBA")
             
-            # Resize poop images (adjust size as needed)
+
             size = (32, 32)
             poop1 = poop1.resize(size, Image.LANCZOS)
             poop2 = poop2.resize(size, Image.LANCZOS)
             
-            # Create a transparent background
-            # This ensures proper transparency handling in Tkinter
+
+
             for img in [poop1, poop2]:
-                # Create a fully transparent background
+
                 background = Image.new("RGBA", img.size, (0, 0, 0, 0))
-                # Composite the image onto the transparent background
+
                 background.paste(img, (0, 0), img)
                 img = background
             
-            # Convert to PhotoImage
+
             self.poop_images = [
                 ImageTk.PhotoImage(poop1),
                 ImageTk.PhotoImage(poop2)
             ]
             
-            # Load and prepare toilet paper image for cursor
+
             toilet_paper = Image.open(os.path.join(img_path, 'toilet_paper.png')).convert("RGBA")
             toilet_paper = toilet_paper.resize((32, 32), Image.LANCZOS)
             
-            # Create transparent background for toilet paper
+
             background = Image.new("RGBA", toilet_paper.size, (0, 0, 0, 0))
             background.paste(toilet_paper, (0, 0), toilet_paper)
             toilet_paper = background
@@ -107,88 +98,88 @@ class PoopSystem:
             print(f'Error loading poop images: {e}')
     
     def check_poop_generation(self, x, y):
-        """Check if a poop should be generated at the current position"""
-        # Don't generate poop if pet is interacting or in cleaning mode
+
+
         if self.pet_state.is_interacting or self.cleaning_mode:
             return
         
-        # Check if enough time has passed since last poop
+
         now = datetime.now()
         if (now - self.last_poop_time).total_seconds() < self.min_poop_interval:
             return
         
-        # Random chance to generate poop based on cleanliness stat and poop_frequency setting
-        # Lower cleanliness increases poop chance, but with a more significant effect from the slider
+
+
         cleanliness = self.pet_state.stats.get_stat('cleanliness') if hasattr(self.pet_state, 'stats') else 100
         
-        # Calculate poop chance based on cleanliness, poop_frequency setting, and food consumed
-        # Lower cleanliness increases poop chance
+
+
         adjusted_chance = self.poop_chance * (1 + (100 - cleanliness) / 100)
         
-        # Add food consumption effect to poop chance
+
         if self.food_consumed > 0:
             food_effect = self.food_consumed * self.food_poop_multiplier
             adjusted_chance += food_effect
             print(f"Food effect on poop chance: +{food_effect:.2f}% from {self.food_consumed} food items")
         
-        # Debug print to check poop generation
+
         print(f"Poop check: chance={adjusted_chance:.2f}%, random={random.random() * 100:.2f}%, interval={self.min_poop_interval}s")
         
-        # Significantly increase the chance to make poops appear more frequently for testing
+
         random_value = random.random()
         if random_value <= (adjusted_chance):
             print(f"GENERATING POOP! Random value: {random_value} <= {adjusted_chance}")
-            # Get absolute screen coordinates for the poop
-            # Use the root window's position plus the canvas center coordinates
+
+
             screen_x = self.root.winfo_x() + 128  # Center of pet canvas
             screen_y = self.root.winfo_y() + 128  # Center of pet canvas
             self.generate_poop(screen_x, screen_y)
             self.last_poop_time = now
             
-            # Reduce the minimum interval between poops when frequency is high
+
             self.min_poop_interval = max(10, 300 - (self.poop_chance * 1000))  # Reduced minimum interval
             
-            # Reduce food consumed counter after generating a poop
+
             if self.food_consumed > 0:
                 self.food_consumed = 0  # Reset to 0 instead of reducing by 1
                 print(f"Food consumed reset to {self.food_consumed} after generating poop")
     
     def generate_poop(self, screen_x, screen_y):
-        """Generate a poop at the specified absolute screen position"""
-        # Start with the first poop image
+
+
         poop_img = self.poop_images[0]
         
-        # Add small random offset so poop isn't directly under pet
+
         offset_x = random.randint(-20, 20)
         offset_y = random.randint(-20, 20)
         
-        # Store absolute screen coordinates
+
         abs_x = screen_x + offset_x
         abs_y = screen_y + offset_y
         
-        # Create a separate toplevel window for the poop
+
         poop_window = tk.Toplevel(self.root)
         poop_window.overrideredirect(True)  # Remove window decorations
         poop_window.attributes('-topmost', True)  # Keep on top
         
-        # Make window transparent - use a consistent approach for Windows
-        # Use a specific color for transparency that works well on Windows
+
+
         transparent_color = '#010101'
         poop_window.config(bg=transparent_color)
         poop_window.attributes('-transparentcolor', transparent_color)
         
-        # Create canvas for poop with transparent background
+
         poop_canvas = tk.Canvas(poop_window, width=32, height=32, 
                               highlightthickness=0, bg=transparent_color)
         poop_canvas.pack()
         
-        # Create poop on canvas
+
         poop_id = poop_canvas.create_image(16, 16, image=poop_img)
         
-        # Position the poop window at the absolute coordinates
+
         poop_window.geometry(f'32x32+{abs_x}+{abs_y}')
         
-        # Store poop info with reference to the image, window and canvas
+
         self.poops.append({
             'id': poop_id,
             'window': poop_window,

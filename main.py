@@ -19,22 +19,16 @@ from inventory_system import InventorySystem
 from pet_animation import PetAnimation
 from pet_components import PetStats, PetGrowth
 
-# PetStats class is now imported from pet_components.py
-
 class PetState:
     def __init__(self):
-        # Create PetGrowth instance first
         self.growth = PetGrowth(None)
-        # Create PetStats with reference to growth
         self.stats = PetStats(self.growth)
-        # Connect stats back to growth
         self.growth.stats = self.stats
-        self.stage = 'Baby'  # Baby, Child, Teen, Adult
+        self.stage = 'Baby'
         self.current_animation = 'Standing'
         self.direction = 'left'
-        self.is_interacting = False  # Flag to track if pet is in an interaction
-        self.currency = 100  # Initialize currency with starting amount
-        # Dictionary to track game progress (highest level reached for each game)
+        self.is_interacting = False
+        self.currency = 100
         self.game_progress = {
             'number_guesser': 1,
             'reaction_test': 1,
@@ -243,7 +237,7 @@ class VirtualPet:
     
     def update_state(self):
         """Update pet state based on elapsed time"""
-        # Use the update method from the PetStats class in pet_components.py
+        
         self.pet_state.stats.update()
         
         # Check if pet is sick
