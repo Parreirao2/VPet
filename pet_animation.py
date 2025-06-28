@@ -332,7 +332,7 @@ class PetAnimation:
                 'special': ['Happy', 'Walk1', 'Walk2', 'Happy'],
                 'angry': ['Angry', 'Walk1'],
                 'sad': ['Lose1', 'Walk1'],
-                'sick': ['Lose1', 'Sleep1']
+                'sick': ['Walk1', 'Lose1']  # Fixed to cycle between Walk1 and Lose1
             }
             
             sequence = animation_sequences[self.pet_state.current_animation]

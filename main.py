@@ -704,8 +704,8 @@ class VirtualPet:
         if not hasattr(self, 'currency_system'):
             self.currency_system = CurrencySystem(self.pet_state)
         
-        # Create and show the game hub
-        game_hub = GameHub(self.root, self.currency_system)
+        # Create and show the game hub with pet_state
+        game_hub = GameHub(self.root, self.currency_system, self.pet_state)
     
     def handle_drag(self, event):
         """Handle dragging the pet with the mouse"""

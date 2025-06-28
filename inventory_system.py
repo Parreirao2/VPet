@@ -115,6 +115,18 @@ class InventorySystem:
                 )
                 toilet_paper.load_image()
                 self.items["toilet_paper"] = toilet_paper
+            
+            # Add shower as default item
+            shower_path = os.path.join(img_path, 'shower.png')
+            if os.path.exists(shower_path):
+                shower = InventoryItem(
+                    name="Shower",
+                    image_path=shower_path,
+                    description="Increases cleanliness by 15%",
+                    quantity=5
+                )
+                shower.load_image()
+                self.items["shower"] = shower
 
             # Define food items with their stats and prices from Features.txt
             food_items = [
@@ -324,11 +336,12 @@ class InventorySystem:
             use_btn.pack(side=tk.TOP, pady=1)
             use_btn.config(width=6)
             
-            # Add Buy button below Use button
-            buy_btn = tk.Button(button_container, text="Buy", command=lambda i=item_id: self.buy_item(i),
-                          bg=COLORS['secondary'], fg='white', font=('Arial', 7))
-            buy_btn.pack(side=tk.TOP)
-            buy_btn.config(width=6)
+            # Add Buy button below Use button (except for shower and toilet paper which are free items)
+            if item_id not in ["shower", "toilet_paper"]:
+                buy_btn = tk.Button(button_container, text="Buy", command=lambda i=item_id: self.buy_item(i),
+                              bg=COLORS['secondary'], fg='white', font=('Arial', 7))
+                buy_btn.pack(side=tk.TOP)
+                buy_btn.config(width=6)
             
             # Create tooltip with detailed item description
             tooltip_text = self.get_item_description(item_id)
@@ -465,6 +478,8 @@ class InventorySystem:
             self.items[item_id].add(1)
             # Update UI
             self.update_ui()
+            # Update currency display
+            self.update_currency_display()
             # Show feedback
             self.show_buy_feedback(item_id)
             return True
@@ -505,6 +520,17 @@ class InventorySystem:
         # Remove the message after a short delay
         self.inventory_window.after(2000, message.destroy)
 
+    def update_ui(self):
+        """Update all UI elements including quantity displays and currency"""
+        # Update quantity displays for all items
+        for button in self.item_buttons:
+            item_id = button["id"]
+            if item_id in self.items:
+                button["qty_label"].config(text=f"x{self.items[item_id].quantity}")
+        
+        # Update currency display
+        self.update_currency_display()
+    
     def apply_item_effects(self, item):
         """Apply item effects based on Features.txt specifications"""
         stats = self.pet_state.stats.stats
@@ -564,6 +590,24 @@ class InventorySystem:
                     # Return False and don't consume the item when there are no poops
                     item.quantity += 1  # Restore the item that was consumed in use_item
                     return False
+        elif item.name == "Shower":
+            # Increase cleanliness by 15%
+            stats['cleanliness'] = min(100, stats['cleanliness'] + 15)
+            
+            # Show feedback message
+            if self.inventory_window and self.inventory_window.winfo_exists():
+                message = tk.Label(self.inventory_window, text="Cleanliness +15%!", 
+                                  bg=COLORS['success'], fg="white",
+                                  font=("Arial", 10, "bold"),
+                                  padx=10, pady=5)
+                message.place(relx=0.5, rely=0.1, anchor="center")
+                self.inventory_window.after(2000, message.destroy)
+                
+            # Update pet animation to show clean effect
+            if hasattr(self.pet_state, 'pet_manager'):
+                self.pet_state.pet_manager.handle_interaction('clean')
+                
+            return True
         
         # If this was a food item, increase the poop chance
         if is_food_item and hasattr(self.pet_state, 'poop_system'):
@@ -1087,6 +1131,15 @@ class InventorySystem:
                 return item_id
         return None
 
+    def cleanup(self):
+        """Clean up resources when shutting down"""
+        # Close inventory window if open
+        if self.inventory_window and self.inventory_window.winfo_exists():
+            self.inventory_window.destroy()
+        
+        # Stop item use mode
+        self.stop_item_use_mode()
+
     def get_item_description(self, item_id):
         """Get detailed description for an item with its attributes"""
         if item_id in self.items:
@@ -1096,42 +1149,35 @@ class InventorySystem:
             effects = ""
             if item_id == "toilet_paper":
                 effects = "\n\nEffects:\n- Cleans 1 poop\n- +15% Cleanliness"
-            elif item_id == "bread":
-                effects = "\n\nEffects:\n- +5% Hunger\n- +3% Happiness"
-            elif item_id == "chocolate_bar":
-                effects = "\n\nEffects:\n- +5% Hunger\n- +5% Energy\n- +3% Happiness"
-            elif item_id == "donut":
-                effects = "\n\nEffects:\n- +5% Hunger\n- +10% Energy\n- -5% Health\n- +6% Happiness"
-            elif item_id == "tomato":
-                effects = "\n\nEffects:\n- +10% Hunger\n- +10% Energy\n- +5% Health\n- +6% Happiness"
-            elif item_id == "soda":
-                effects = "\n\nEffects:\n- +5% Hunger\n- +10% Energy\n- +6% Happiness"
-            elif item_id == "milk":
-                effects = "\n\nEffects:\n- +10% Hunger\n- +10% Energy\n- +5% Health\n- +9% Happiness"
-            elif item_id == "strawberry_milk":
-                effects = "\n\nEffects:\n- +15% Hunger\n- +15% Energy\n- +15% Health\n- +12% Happiness"
-            
-            # Add price information
-            price = self.get_item_price(item_id)
-            price_info = f"\n\nPrice: {price} coins"
-            
-            # Format the tooltip with better spacing and organization
-            tooltip = f"{item.name}\n\n{item.description}{effects}{price_info}"
+            elif item_id == "shower":
+                effects = "\n\nEffects:\n- +15% Cleanliness"
+            # For all food items, use their stored description
+            else:
+                effects = "\n\nEffects:\n" + item.description
+                
+            # Format price information
+            price_info = ""
+            if item_id not in ["toilet_paper", "shower"]:
+                price = self.get_item_price(item_id)
+                price_info = f"\n\nPrice: {price} coins"
             
             # Add usage instructions based on item type
+            usage_info = ""
             if item_id == 'toilet_paper':
-                tooltip += "\n\nUse: Cleans one poop at a time"
-            else:
-                tooltip += "\n\nUse: Feeds pet and improves stats"
-                
-            return tooltip
-        return "Unknown Item"
-    
+                usage_info = "\n\nUse: Cleans one poop at a time"
+            elif item_id == 'shower':
+                usage_info = "\n\nUse: Increases cleanliness by 15%"
+            
+            # Format the tooltip with better spacing and organization
+            return f"{item.name}\n{'-' * len(item.name)}\n{effects}{price_info}{usage_info}"
+        
+        return "Item not found"
+            
     def get_item_price(self, item_id):
         """Get the price of an item based on its ID"""
-        # Special case for toilet paper
-        if item_id == "toilet_paper":
-            return 10
+        # Special case for free items
+        if item_id in ["toilet_paper", "shower"]:
+            return 0
             
         # Get price from food items list
         food_items = [
@@ -1161,91 +1207,216 @@ class InventorySystem:
         # Default price if not found
         return 10
 
-    def add_item(self, item_id, amount=1):
-        """Add an item to the inventory"""
-        if item_id in self.items:
-            self.items[item_id].add(amount)
-            return True
-        return False
-
-    def update_currency_display(self):
-        """Update currency display in the UI"""
-        if hasattr(self.pet_state, 'currency_label'):
-            self.pet_state.currency_label.config(
-                text=f"Coins: {self.pet_state.currency}"
-            )
-
-    def update_item_quantity_display(self, item_id):
-        """Update quantity display for specific item"""
-        for btn in self.item_buttons:
-            if btn['id'] == item_id:
-                btn["qty_label"].config(text=f"x{self.items[item_id].quantity}")
-    
-    def buy_item(self, item_id):
-        """Handle item purchases with currency deduction"""
-        item_prices = {
-            'bread': 5,
-            'chocolate_bar': 7,
-            'donut': 10,
-            'tomato': 15,
-            'soda': 12,
-            'milk': 18,
-            'strawberry_milk': 30,
-            'toilet_paper': 5
-        }
-
-        price = item_prices.get(item_id, 0)
-        if self.pet_state.currency >= price:
-            self.pet_state.currency -= price
-            self.items[item_id].add()
-            self.update_currency_display()
-            self.update_item_quantity_display(item_id)
-            return True
-        return False
-
-    def update_currency_display(self):
-        """Update currency display in the UI"""
-        if hasattr(self.pet_state, 'currency_label'):
-            self.pet_state.currency_label.config(
-                text=f"Coins: {self.pet_state.currency}"
-            )
-
-    def update_item_quantity_display(self, item_id):
-        """Update quantity display for specific item"""
-        for btn in self.item_buttons:
-            if btn['id'] == item_id:
-                btn["qty_label"].config(text=f"x{self.items[item_id].quantity}")
-    
-    def update_ui(self):
-        """Update inventory UI elements"""
-        # Update item quantity displays
-        for btn in self.item_buttons:
-            if btn['id'] in self.items:
-                btn['qty_label'].config(text=f"x{self.items[btn['id']].quantity}")
-        
-        # Update currency display
-        if hasattr(self.pet_state, 'currency_label'):
-            self.pet_state.currency_label.config(text=f"Coins: {self.pet_state.currency}")
-            
-    def show_item_used_feedback(self, item_id):
-        """Show visual feedback when an item is used"""
-        if not self.inventory_window or not self.inventory_window.winfo_exists():
+    def start_drag_mode(self, item_id):
+        """Start drag mode for selected item"""
+        item = self.items.get(item_id)
+        if not item:
             return
+        
+        # Create drag window
+        drag_window = tk.Toplevel(self.root)
+        drag_window.overrideredirect(True)
+        drag_window.attributes('-topmost', True)
+        drag_window.attributes('-alpha', 0.7)
+        
+        # Create label with item image
+        if item.image:
+            label = tk.Label(drag_window, image=item.image, bg='white')
+            label.pack()
             
-        # Find the button for this item
-        for button in self.item_buttons:
-            if button["id"] == item_id:
-                # Create a temporary label to show feedback
-                feedback = tk.Label(button["frame"], text="Used!", 
-                                  bg=COLORS['success'], fg="white",
-                                  font=("Arial", 8, "bold"))
-                feedback.place(relx=0.5, rely=0.5, anchor="center")
+            # Update window size based on image
+            drag_window.geometry(f"{item.image.width()}x{item.image.height()}")
+        
+        # Track mouse movement
+        def update_position(event):
+            x = self.root.winfo_pointerx() - drag_window.winfo_width()//2
+            y = self.root.winfo_pointery() - drag_window.winfo_height()//2
+            drag_window.geometry(f"+{x}+{y}")
+        
+        # Bind mouse movement
+        self.root.bind('<Motion>', update_position)
+        
+        # Handle item use on click
+        def use_dragged_item(event):
+            if self.selected_item:
+                self.use_item(item_id)
+            drag_window.destroy()
+            self.root.unbind('<Motion>')
+            self.root.unbind('<Button-1>')
+        
+        self.root.bind('<Button-1>', use_dragged_item)
+        
+        # Initial position
+        update_position(None)
+        
+    def drop_item(self, event):
+        """Handle dropping the item at the current position"""
+        if not self.selected_item or not self.dragging:
+            return "break"  # Prevent event from propagating even if not dragging
+        
+        self.dragging = False
+        item_used = False
+        
+        # Get absolute coordinates from the drag window position
+        if hasattr(self, 'drag_window'):
+            # Use the center of the drag window for collision detection
+            abs_x = self.current_drag_x
+            abs_y = self.current_drag_y
+        else:
+            # Fallback to mouse coordinates if drag window doesn't exist
+            abs_x = self.root.winfo_x() + event.x
+            abs_y = self.root.winfo_y() + event.y
+        
+        # Handle different item types
+        if self.selected_item.name == "Toilet Paper":
+            # Clean poop if poop system is available
+            if hasattr(self.pet_state, 'pet_manager') and hasattr(self.pet_state.pet_manager, 'poop_system'):
+                poop_system = self.pet_state.pet_manager.poop_system
                 
-                # Remove the feedback after a short delay
-                self.inventory_window.after(1000, feedback.destroy)
+                # Check if dropped on any poop
+                for i, poop in enumerate(poop_system.poops[:]):
+                    # Get poop window position
+                    poop_x = poop['window'].winfo_x() + 16  # Center of poop
+                    poop_y = poop['window'].winfo_y() + 16  # Center of poop
+                    
+                    # Simple distance-based hit detection
+                    distance = ((poop_x - abs_x) ** 2 + (poop_y - abs_y) ** 2) ** 0.5
+                    if distance < 40:  # Increased radius for easier hit detection
+                        # Visual feedback - flash effect before removing
+                        try:
+                            poop['canvas'].itemconfig(poop['id'], state='hidden')
+                            poop['window'].update()
+                            self.root.after(100)
+                            poop['canvas'].itemconfig(poop['id'], state='normal')
+                            poop['window'].update()
+                            self.root.after(100)
+                        except Exception:
+                            pass  # In case window was already destroyed
+                            
+                        # Destroy poop window
+                        poop['window'].destroy()
+                        # Remove from list
+                        poop_system.poops.pop(i)
+                        item_used = True
+                        
+                        # Improve cleanliness stat slightly for each cleaned poop
+                        if 'cleanliness' in self.pet_state.stats:
+                            # ...
+                            # In drop_item method where poop is cleaned:
+                            self.pet_state.stats['cleanliness'] = min(100, self.pet_state.stats['cleanliness'] + 15)
+                        break
+        
+        # Handle food items
+        elif self.selected_item.name in ["Bread", "Milk", "Chocolate"]:
+            # Feed pet if within range
+            if hasattr(self.pet_state, 'pet_manager'):
+                # Get pet window position and center
+                pet_x = self.root.winfo_x() + 128  # Assuming pet is centered in canvas
+                pet_y = self.root.winfo_y() + 128  # Assuming pet is centered in canvas
                 
-                # Also update the quantity label immediately
-                button["qty_label"].config(text=f"x{self.items[item_id].quantity}")
+                # Simple distance check to pet center using absolute coordinates
+                distance = ((abs_x - pet_x) ** 2 + (abs_y - pet_y) ** 2) ** 0.5
+                if distance < 60:  # Increased radius for easier feeding
+                    # Visual feedback before feeding
+                    self.pet_state.pet_manager.handle_interaction('feed')
+                    item_used = True
+        
+        # Reduce quantity if item was used
+        if item_used:
+            self.selected_item.use()
+            
+            # Update quantity label if inventory is open
+            for button in self.item_buttons:
+                if button["id"] == self.get_item_id(self.selected_item):
+                    button["qty_label"].config(text=f"x{self.selected_item.quantity}")
+            
+            # Stop using item if quantity is zero
+            if self.selected_item.quantity <= 0:
+                self.stop_item_use_mode()
+        else:
+            # Provide visual feedback that item couldn't be used here
+            # Shake effect for the drag window
+            if hasattr(self, 'drag_window'):
+                original_x = self.drag_window.winfo_x()
+                original_y = self.drag_window.winfo_y()
+                for offset in [3, -6, 6, -3]:
+                    self.drag_window.geometry(f'+{original_x + offset}+{original_y}')
+                    self.drag_window.update()
+                    self.root.after(50)
+                # Reset to original position
+                self.drag_window.geometry(f'+{original_x}+{original_y}')
+        
+        # Clean up the drag window
+        if hasattr(self, 'drag_window'):
+            self.drag_window.destroy()
+            delattr(self, 'drag_window')
+            delattr(self, 'drag_canvas')
+            
+        # Restore item cursor for continued use if item wasn't fully used up
+        if self.selected_item and self.selected_item.quantity > 0:
+            self.item_cursor_id = self.canvas.create_image(event.x, event.y, image=self.selected_item.image)
+        
+        # Prevent event from propagating to other handlers
+        return "break"
+    
+    def use_selected_item(self, event):
+        """Legacy method for backward compatibility"""
+        # This is now handled by drop_item
+        pass
+    
+    def stop_item_use_mode(self):
+        """Stop using the selected item"""
+        # Restore original cursor
+        self.canvas.config(cursor=self.original_cursor)
+        
+        # Remove item cursor image
+        if hasattr(self, 'item_cursor_id'):
+            self.canvas.delete(self.item_cursor_id)
+            delattr(self, 'item_cursor_id')
+        
+        # Clean up drag window if it exists
+        if hasattr(self, 'drag_window') and self.drag_window.winfo_exists():
+            self.drag_window.destroy()
+            delattr(self, 'drag_window')
+            if hasattr(self, 'drag_canvas'):
+                delattr(self, 'drag_canvas')
+        
+        # Clean up drag image reference
+        if hasattr(self, 'drag_image'):
+            delattr(self, 'drag_image')
+        
+        # Reset dragging state
+        self.dragging = False
+        
+        # Unbind all events related to item use
+        self.canvas.unbind('<Motion>')
+        self.canvas.unbind('<Button-1>')
+        self.canvas.unbind('<B1-Motion>')
+        self.canvas.unbind('<ButtonRelease-1>')
+        
+        # Restore original bindings if they were saved
+        if hasattr(self, 'original_bindings'):
+            # Only restore bindings that were previously saved
+            for event, binding in self.original_bindings.items():
+                if binding:
+                    if event == 'motion':
+                        self.canvas.bind('<Motion>', binding)
+                    elif event == 'button1':
+                        self.canvas.bind('<Button-1>', binding)
+                    elif event == 'button1_motion':
+                        self.canvas.bind('<B1-Motion>', binding)
+                    elif event == 'buttonrelease1':
+                        self.canvas.bind('<ButtonRelease-1>', binding)
+            delattr(self, 'original_bindings')
+        
+        # Reset selected item
+        if self.selected_item:
+            self.selected_item.selected = False
+            self.selected_item = None
+        
+        # Reset cleaning mode if toilet paper was being used
+        if hasattr(self.pet_state, 'pet_manager') and hasattr(self.pet_state.pet_manager, 'poop_system'):
+            self.pet_state.pet_manager.poop_system.cleaning_mode = False
     
     def get_item_id(self, item):
         """Get the ID of an item object"""

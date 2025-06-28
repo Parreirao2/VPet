@@ -660,13 +660,22 @@ class SimpleSettingsWindow:
         poop_slider = ttk.Scale(poop_frame, from_=0.1, to=2.0, variable=poop_var, orient=tk.HORIZONTAL)
         poop_slider.pack(fill=tk.X)
         
-        # Update label when slider moves
-        def update_poop_label(event=None):
+        # Update label visually when slider moves
+        def update_poop_label_visual(event=None):
             poop_value_label.config(text=f"{poop_var.get():.1f}")
-            self.pet_manager.update_setting('poop_frequency', poop_var.get())
+
+        # Update system and save settings when slider is released
+        def update_poop_label_complete(event=None):
+            value = poop_var.get()
+            poop_value_label.config(text=f"{value:.1f}")
+            self.pet_manager.update_setting('poop_frequency', value)
+            # Also update the poop system directly if it exists
+            if hasattr(self.pet_manager, 'poop_system') and self.pet_manager.poop_system:
+                self.pet_manager.poop_system.poop_chance = value
+                print(f"Poop frequency updated to {value:.1f}")
             
-        poop_slider.bind("<Motion>", update_poop_label)
-        poop_slider.bind("<ButtonRelease-1>", update_poop_label)
+        poop_slider.bind("<Motion>", update_poop_label_visual)
+        poop_slider.bind("<ButtonRelease-1>", update_poop_label_complete)
         
         # Add description label
         ttk.Label(poop_frame, text="Lower values mean less frequent poops, higher values mean more frequent poops.", 
@@ -715,13 +724,18 @@ class SimpleSettingsWindow:
             ttk.Label(slider_labels_frame, text="Slow", font=("Arial", 8)).pack(side=tk.LEFT)
             ttk.Label(slider_labels_frame, text="Fast", font=("Arial", 8)).pack(side=tk.RIGHT)
             
-            # Update function that updates both the rate and the label
-            def update_rate(event, s=stat, v=rate_var, lbl=value_label):
+            # Update label visually when slider moves
+            def update_rate_visual(event, v=rate_var, lbl=value_label):
                 lbl.config(text=f"{v.get():.1f}")
-                self._update_depletion_rate(s, v.get())
+
+            # Update system and save settings when slider is released
+            def update_rate_complete(event, s=stat, v=rate_var, lbl=value_label):
+                value = v.get()
+                lbl.config(text=f"{value:.1f}")
+                self._update_depletion_rate(s, value)
             
-            rate_slider.bind("<Motion>", lambda e, s=stat, v=rate_var, lbl=value_label: lbl.config(text=f"{v.get():.1f}"))
-            rate_slider.bind("<ButtonRelease-1>", update_rate)
+            rate_slider.bind("<Motion>", update_rate_visual)
+            rate_slider.bind("<ButtonRelease-1>", update_rate_complete)
 
     def _apply_advanced_changes(self, new_age, new_stage):
         """Apply changes from advanced settings"""
@@ -755,6 +769,9 @@ class SimpleSettingsWindow:
         # Update the decay rate in the pet's stats object
         if hasattr(self.pet_manager.pet_state, 'stats') and hasattr(self.pet_manager.pet_state.stats, 'decay_rates'):
             self.pet_manager.pet_state.stats.decay_rates[stat] = value
+            # Also update the setting in the settings file
+            self.pet_manager.update_setting(f'stat_depletion_{stat}', value)
+            print(f"Updated {stat} depletion rate to {value:.1f}")
             # No notification for slider adjustments to avoid popup spam
         else:
             # Only show notification for errors
@@ -1681,7 +1698,16 @@ class CombinedPanel(ttk.Frame):
     
     def update_stats_display(self):
         """Update the stats display with current values"""
-        if not self.stats_frame:
+        if not self.stats_frame or not self.panel_window:
+            return
+            
+        # Check if panel window still exists
+        try:
+            # This will raise TclError if window is destroyed
+            self.panel_window.winfo_exists()
+        except tk.TclError:
+            # Window no longer exists, clean up references and return
+            self.hide_panel()
             return
             
         # Get current stats
@@ -1697,19 +1723,20 @@ class CombinedPanel(ttk.Frame):
             # After creating widgets, we need to make sure they're visible
             self.stats_frame.update()
         
-        # Update pet info
-        if hasattr(self, 'name_label') and self.name_label:
-            self.name_label.config(text=f"{stats['name']} - {stats['stage']}")
-        
-        if hasattr(self, 'age_label') and self.age_label:
-            self.age_label.config(text=f"Age: {stats['age']} days")
-        
-        # Update currency
-        if hasattr(self, 'currency_label') and self.currency_label:
-            self.currency_label.config(text=f"Coins: {self.pet_manager.pet_state.currency}")
-        
-        # Update stat bars
+        # Update pet info - wrap all widget updates in try/except to catch TclErrors
         try:
+            # Update pet info
+            if hasattr(self, 'name_label') and self.name_label:
+                self.name_label.config(text=f"{stats['name']} - {stats['stage']}")
+            
+            if hasattr(self, 'age_label') and self.age_label:
+                self.age_label.config(text=f"Age: {stats['age']} days")
+            
+            # Update currency
+            if hasattr(self, 'currency_label') and self.currency_label:
+                self.currency_label.config(text=f"Coins: {self.pet_manager.pet_state.currency}")
+            
+            # Update stat bars
             self._update_stat_bar(stats['hunger'], "hunger")
             self._update_stat_bar(stats['happiness'], "happiness")
             self._update_stat_bar(stats['energy'], "energy")
@@ -1719,27 +1746,38 @@ class CombinedPanel(ttk.Frame):
             
             # Force update to ensure widgets are displayed
             self.stats_frame.update()
-        except Exception as e:
-            # If there's an error, recreate the widgets
-            for widget in self.stats_frame.winfo_children():
-                widget.destroy()
-            self._stat_widgets = {}
-            self._create_stat_widgets()
-            self.stats_frame.update()
-        
-        # Update status effects
-        if stats['status_effects']:
-            effects_text = ", ".join(stats['status_effects'])
-            if hasattr(self, 'status_label') and self.status_label:
-                self.status_label.config(text=f"Status: {effects_text}", fg=COLORS['error'])
-                if not self.status_label.winfo_ismapped():
+            
+            # Update status effects
+            if stats['status_effects']:
+                effects_text = ", ".join(stats['status_effects'])
+                if hasattr(self, 'status_label') and self.status_label:
+                    self.status_label.config(text=f"Status: {effects_text}", fg=COLORS['error'])
+                    if not self.status_label.winfo_ismapped():
+                        self.status_label.pack(anchor="w", pady=(5, 0))
+                else:
+                    self.status_label = tk.Label(self.stats_frame, text=f"Status: {effects_text}", 
+                                              font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['error'])
                     self.status_label.pack(anchor="w", pady=(5, 0))
-            else:
-                self.status_label = tk.Label(self.stats_frame, text=f"Status: {effects_text}", 
-                                          font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['error'])
-                self.status_label.pack(anchor="w", pady=(5, 0))
-        elif hasattr(self, 'status_label') and self.status_label and self.status_label.winfo_ismapped():
-            self.status_label.pack_forget()
+            elif hasattr(self, 'status_label') and self.status_label and self.status_label.winfo_ismapped():
+                self.status_label.pack_forget()
+                
+        except tk.TclError as e:
+            # Widget error occurred, likely because panel was closed
+            print(f"TclError in update_stats_display: {e}")
+            # Clean up properly
+            self.hide_panel()
+        except Exception as e:
+            print(f"Error in update_stats_display: {e}")
+            # If there's an error, recreate the widgets
+            try:
+                for widget in self.stats_frame.winfo_children():
+                    widget.destroy()
+                self._stat_widgets = {}
+                self._create_stat_widgets()
+                self.stats_frame.update()
+            except tk.TclError:
+                # If we can't recreate widgets, panel is likely destroyed
+                self.hide_panel()
     
     def _create_stat_bar(self, value, label):
         """Create a stat bar with proper coloring based on value"""
@@ -2322,10 +2360,29 @@ class SimpleStatusPanel:
             self.panel_window.destroy()
             self.panel_window = None
             self.is_visible = False
+            
+            # Clear all widget references to prevent accessing destroyed widgets
+            self.stats_frame = None
+            self.name_label = None
+            self.age_label = None
+            self.currency_label = None
+            self.weight_label = None
+            self.status_label = None
+            self.currency_icon_label = None
+            self._stat_widgets = {}
     
     def update_stats_display(self):
         """Update the stats display with current values"""
-        if not self.stats_frame:
+        if not self.stats_frame or not self.panel_window:
+            return
+            
+        # Check if panel window still exists
+        try:
+            # This will raise TclError if window is destroyed
+            self.panel_window.winfo_exists()
+        except tk.TclError:
+            # Window no longer exists, clean up references and return
+            self.hide_panel()
             return
             
         # Get current stats
@@ -2341,19 +2398,20 @@ class SimpleStatusPanel:
             # After creating widgets, we need to make sure they're visible
             self.stats_frame.update()
         
-        # Update pet info
-        if hasattr(self, 'name_label') and self.name_label:
-            self.name_label.config(text=f"{stats['name']} - {stats['stage']}")
-        
-        if hasattr(self, 'age_label') and self.age_label:
-            self.age_label.config(text=f"Age: {stats['age']} days")
-        
-        # Update currency
-        if hasattr(self, 'currency_label') and self.currency_label:
-            self.currency_label.config(text=f"Coins: {self.pet_manager.pet_state.currency}")
-        
-        # Update stat bars
+        # Update pet info - wrap all widget updates in try/except to catch TclErrors
         try:
+            # Update pet info
+            if hasattr(self, 'name_label') and self.name_label:
+                self.name_label.config(text=f"{stats['name']} - {stats['stage']}")
+            
+            if hasattr(self, 'age_label') and self.age_label:
+                self.age_label.config(text=f"Age: {stats['age']} days")
+            
+            # Update currency
+            if hasattr(self, 'currency_label') and self.currency_label:
+                self.currency_label.config(text=f"Coins: {self.pet_manager.pet_state.currency}")
+            
+            # Update stat bars
             self._update_stat_bar(stats['hunger'], "hunger")
             self._update_stat_bar(stats['happiness'], "happiness")
             self._update_stat_bar(stats['energy'], "energy")
@@ -2363,27 +2421,38 @@ class SimpleStatusPanel:
             
             # Force update to ensure widgets are displayed
             self.stats_frame.update()
-        except Exception as e:
-            # If there's an error, recreate the widgets
-            for widget in self.stats_frame.winfo_children():
-                widget.destroy()
-            self._stat_widgets = {}
-            self._create_stat_widgets()
-            self.stats_frame.update()
-        
-        # Update status effects
-        if stats['status_effects']:
-            effects_text = ", ".join(stats['status_effects'])
-            if hasattr(self, 'status_label') and self.status_label:
-                self.status_label.config(text=f"Status: {effects_text}", fg=COLORS['error'])
-                if not self.status_label.winfo_ismapped():
+            
+            # Update status effects
+            if stats['status_effects']:
+                effects_text = ", ".join(stats['status_effects'])
+                if hasattr(self, 'status_label') and self.status_label:
+                    self.status_label.config(text=f"Status: {effects_text}", fg=COLORS['error'])
+                    if not self.status_label.winfo_ismapped():
+                        self.status_label.pack(anchor="w", pady=(5, 0))
+                else:
+                    self.status_label = tk.Label(self.stats_frame, text=f"Status: {effects_text}", 
+                                              font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['error'])
                     self.status_label.pack(anchor="w", pady=(5, 0))
-            else:
-                self.status_label = tk.Label(self.stats_frame, text=f"Status: {effects_text}", 
-                                          font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['error'])
-                self.status_label.pack(anchor="w", pady=(5, 0))
-        elif hasattr(self, 'status_label') and self.status_label and self.status_label.winfo_ismapped():
-            self.status_label.pack_forget()
+            elif hasattr(self, 'status_label') and self.status_label and self.status_label.winfo_ismapped():
+                self.status_label.pack_forget()
+                
+        except tk.TclError as e:
+            # Widget error occurred, likely because panel was closed
+            print(f"TclError in update_stats_display: {e}")
+            # Clean up properly
+            self.hide_panel()
+        except Exception as e:
+            print(f"Error in update_stats_display: {e}")
+            # If there's an error, recreate the widgets
+            try:
+                for widget in self.stats_frame.winfo_children():
+                    widget.destroy()
+                self._stat_widgets = {}
+                self._create_stat_widgets()
+                self.stats_frame.update()
+            except tk.TclError:
+                # If we can't recreate widgets, panel is likely destroyed
+                self.hide_panel()
     
     def _create_stat_bar(self, value, label):
         """Create a stat bar with proper coloring based on value"""
@@ -2740,6 +2809,10 @@ class SimpleStatusPanel:
         def update_poop_label(event=None):
             poop_value_label.config(text=f"{poop_var.get():.1f}")
             self.pet_manager.update_setting('poop_frequency', poop_var.get())
+            # Also update the poop system directly if it exists
+            if hasattr(self.pet_manager, 'poop_system') and self.pet_manager.poop_system:
+                self.pet_manager.poop_system.poop_chance = poop_var.get()
+                print(f"Poop frequency updated to {poop_var.get():.1f}")
             
         poop_slider.bind("<Motion>", update_poop_label)
         poop_slider.bind("<ButtonRelease-1>", update_poop_label)

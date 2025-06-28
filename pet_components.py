@@ -319,9 +319,9 @@ class PetGrowth:
         self.stats = stats
         self.stage = 'Baby'  # Baby, Child, Teen, Adult
         self.evolution_thresholds = {
-            'Baby': 5,    # Age in days to evolve from Baby to Child
-            'Child': 10,  # Age in days to evolve from Child to Teen
-            'Teen': 20    # Age in days to evolve from Teen to Adult
+            'Baby': 1,    # Age in days to evolve from Baby to Child (24 hours)
+            'Child': 2,   # Age in days to evolve from Child to Teen (48 hours total)
+            'Teen': 3     # Age in days to evolve from Teen to Adult (72 hours total)
         }
         self.skills = {
             'intelligence': 1,

@@ -4,11 +4,12 @@ import random
 import time
 
 class NumberGuesserGame:
-    def __init__(self, parent, currency_system):
+    def __init__(self, parent, currency_system, pet_state=None):
         self.frame = ttk.Frame(parent)
         self.level = 1
         self.guesses_left = 3
         self.currency_system = currency_system
+        self.pet_state = pet_state
         self.last_guess = None  # Track the last guess for hints
         self.setup_ui()
 
@@ -94,6 +95,10 @@ class NumberGuesserGame:
             guess = int(self.entry.get())
             max_number = 10 + (self.level - 1)
             
+            # Consume energy when playing
+            if self.pet_state and hasattr(self.pet_state, 'stats'):
+                self.pet_state.stats.modify_stat('energy', -2)  # Lose 2% energy per guess
+            
             # Clear the entry field
             self.entry.delete(0, 'end')
             
@@ -166,10 +171,11 @@ class NumberGuesserGame:
             self.entry.focus()
 
 class ReactionTestGame:
-    def __init__(self, parent, currency_system):
+    def __init__(self, parent, currency_system, pet_state=None):
         self.frame = ttk.Frame(parent)
         self.level = 1
         self.currency_system = currency_system
+        self.pet_state = pet_state
         self.waiting = False
         self.ready_to_click = False
         self.setup_ui()
@@ -326,6 +332,10 @@ class ReactionTestGame:
         if not self.ready_to_click:  # Safety check
             return
             
+        # Consume energy when playing
+        if self.pet_state and hasattr(self.pet_state, 'stats'):
+            self.pet_state.stats.modify_stat('energy', -3)  # Lose 3% energy per reaction test
+            
         self.ready_to_click = False
         reaction_time = time.time() - self.start_time
         time_limit = max(0.3, 3.0 - (self.level * 0.1))
@@ -393,11 +403,12 @@ class ReactionTestGame:
         ))
 
 class BallClickerGame:
-    def __init__(self, parent, currency_system):
+    def __init__(self, parent, currency_system, pet_state=None):
         self.frame = ttk.Frame(parent)
         self.level = 1
         self.score = 0
         self.currency_system = currency_system
+        self.pet_state = pet_state
         self.game_running = False
         self.balls = []
         self.black_balls_clicked = 0
@@ -623,6 +634,10 @@ class BallClickerGame:
         if not self.game_running or ball not in self.balls:
             return
             
+        # Consume energy when clicking balls
+        if self.pet_state and hasattr(self.pet_state, 'stats'):
+            self.pet_state.stats.modify_stat('energy', -1)  # Lose 1% energy per ball click
+            
         # Remove the clicked ball
         self.remove_ball(ball)
         
@@ -774,7 +789,7 @@ class BallClickerGame:
         self.canvas.create_text(200, 180, text=stats_text, font=("Arial", 10), fill="blue")
 
 class GameHub:
-    def __init__(self, parent, currency_system):
+    def __init__(self, parent, currency_system, pet_state=None):
         self.window = tk.Toplevel(parent)
         self.window.title("Game Hub")
         self.window.geometry("700x600")
@@ -891,7 +906,7 @@ class GameHub:
     
     def create_number_guesser_game(self, level=1):
         """Create a number guesser game with the specified starting level"""
-        game = NumberGuesserGame(self.notebook, self.currency_system)
+        game = NumberGuesserGame(self.notebook, self.currency_system, self.pet_state)
         game.level = level
         # Update UI to reflect the level
         max_number = 10 + (game.level - 1)
@@ -908,7 +923,7 @@ class GameHub:
     
     def create_reaction_test_game(self, level=1):
         """Create a reaction test game with the specified starting level"""
-        game = ReactionTestGame(self.notebook, self.currency_system)
+        game = ReactionTestGame(self.notebook, self.currency_system, self.pet_state)
         game.level = level
         # Update UI to reflect the level
         game.level_label.config(text=f"Level: {game.level}")
@@ -923,7 +938,7 @@ class GameHub:
     
     def create_ball_clicker_game(self, level=1):
         """Create a ball clicker game with the specified starting level"""
-        game = BallClickerGame(self.notebook, self.currency_system)
+        game = BallClickerGame(self.notebook, self.currency_system, self.pet_state)
         game.level = level
         # Update UI to reflect the level
         game.level_label.config(text=f"Level {game.level}")
