@@ -5,10 +5,13 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 
 (Baby)
 <img src="frames/Baby_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+
 (Child)
 <img src="frames/Child_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+
 (Teen)
 <img src="frames/Teen_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+
 (Adult)
 <img src="frames/Adult_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
 
