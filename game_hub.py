@@ -10,21 +10,25 @@ class NumberGuesserGame:
         self.guesses_left = 3
         self.currency_system = currency_system
         self.pet_state = pet_state
-        self.last_guess = None
+        self.last_guess = None  # Track the last guess for hints
         self.setup_ui()
 
     def setup_ui(self):
         self.target_number = random.randint(1, 10)
         
+        # Create game title with improved styling
         self.title_label = ttk.Label(self.frame, text="Number Guesser", font=("Arial", 16, "bold"), foreground="#2196F3")
         self.title_label.pack(pady=(10, 5))
         
+        # Create reward display with coin icon and improved styling
         self.reward_frame = ttk.Frame(self.frame)
         self.reward_frame.pack(pady=(5, 10))
         
+        # Calculate current reward
         batch_number = (self.level - 1) // 3
         base_reward = 1 + 2 * batch_number
         
+        # Try to load currency icon
         self.currency_icon = None
         try:
             import os
@@ -37,6 +41,7 @@ class NumberGuesserGame:
         except Exception as e:
             print(f"Error loading currency icon: {e}")
         
+        # Create reward label with icon
         if self.currency_icon:
             self.icon_label = ttk.Label(self.reward_frame, image=self.currency_icon)
             self.icon_label.pack(side='left', padx=(0, 5))
@@ -44,9 +49,11 @@ class NumberGuesserGame:
         self.reward_label = ttk.Label(self.reward_frame, text=f"Reward: {base_reward} coins", font=("Arial", 10, "bold"))
         self.reward_label.pack(side='left')
         
+        # Create game container with border and improved styling
         self.game_container = ttk.Frame(self.frame, padding=15, relief="groove")
         self.game_container.pack(fill='both', expand=True, padx=20, pady=10)
         
+        # Level and instruction label with improved styling
         self.info_label = ttk.Label(self.game_container, 
                                    text=f"Level {self.level}\nGuess a number between 1-{10 + (self.level-1)}",
                                    font=("Arial", 12),
@@ -54,16 +61,20 @@ class NumberGuesserGame:
                                    foreground="#333333")
         self.info_label.pack(pady=10)
         
+        # Hint label with improved styling
         self.hint_label = ttk.Label(self.game_container, text="", font=("Arial", 11, "italic"), foreground="#1976D2")
         self.hint_label.pack(pady=8)
         
+        # Input frame
         self.input_frame = ttk.Frame(self.game_container)
         self.input_frame.pack(pady=10)
         
+        # Entry and button side by side with improved styling
         self.entry = ttk.Entry(self.input_frame, width=10, font=("Arial", 12))
         self.entry.pack(side='left', padx=(0, 8))
-        self.entry.bind("<Return>", lambda e: self.check_guess())
+        self.entry.bind("<Return>", lambda e: self.check_guess())  # Allow Enter key to submit
         
+        # Custom styled button
         self.guess_button = tk.Button(self.input_frame, 
                                    text="Guess", 
                                    command=self.check_guess,
@@ -76,6 +87,7 @@ class NumberGuesserGame:
                                    borderwidth=2)
         self.guess_button.pack(side='left')
         
+        # Set focus on entry
         self.entry.focus()
 
     def check_guess(self):
@@ -83,39 +95,51 @@ class NumberGuesserGame:
             guess = int(self.entry.get())
             max_number = 10 + (self.level - 1)
             
+            # Consume energy when playing
             if self.pet_state and hasattr(self.pet_state, 'stats'):
-                self.pet_state.stats.modify_stat('energy', -2)
+                self.pet_state.stats.modify_stat('energy', -2)  # Lose 2% energy per guess
             
+            # Clear the entry field
             self.entry.delete(0, 'end')
             
+            # Store the current guess for comparison
             self.last_guess = guess
             
             if guess == self.target_number:
+                # Success animation/feedback
                 self.hint_label.config(text="Correct! 🎉", foreground="green")
                 
+                # Calculate reward based on level batches
                 batch_number = (self.level - 1) // 3
                 base_reward = 1 + 2 * batch_number
                 self.currency_system.add_currency(base_reward)
                 
+                # Level progression
                 self.level += 1
                 self.guesses_left = 3 + ((self.level - 1) // 5)
                 max_number = 10 + (self.level - 1)
                 self.target_number = random.randint(1, max_number)
                 
+                # Update UI
                 self.info_label.config(text=f"Level {self.level}\nGuess 1-{max_number} ({self.guesses_left} guesses)")
                 
+                # Update reward display
                 new_batch_number = (self.level - 1) // 3
                 new_base_reward = 1 + 2 * new_batch_number
                 self.reward_label.config(text=f"Reward: {new_base_reward} coins")
                 
+                # Clear hint after a delay
                 self.frame.after(1500, lambda: self.hint_label.config(text=""))
             else:
+                # Provide hint
                 hint = "Higher ⬆️" if guess < self.target_number else "Lower ⬇️"
                 self.hint_label.config(text=hint, foreground="blue")
                 
+                # Decrease guesses
                 self.guesses_left -= 1
                 
                 if self.guesses_left <= 0:
+                    # Game over
                     self.hint_label.config(text=f"The number was {self.target_number}", foreground="red")
                     batch_number = (self.level - 1) // 5
                     self.level = batch_number * 5 + 1
@@ -123,17 +147,22 @@ class NumberGuesserGame:
                     max_number = 10 + (self.level - 1)
                     self.target_number = random.randint(1, max_number)
                     
+                    # Update UI with delay to show the correct number first
                     self.frame.after(2000, lambda: self.info_label.config(
                         text=f"Game Over! Restarting at Level {self.level}\nGuess 1-{max_number} ({self.guesses_left} guesses)"))
                     
+                    # Update reward display
                     new_batch_number = (self.level - 1) // 3
                     new_base_reward = 1 + 2 * new_batch_number
                     self.reward_label.config(text=f"Reward: {new_base_reward} coins")
                     
+                    # Clear hint after a delay
                     self.frame.after(2000, lambda: self.hint_label.config(text=""))
                 else:
+                    # Update remaining guesses
                     self.info_label.config(text=f"Guesses left: {self.guesses_left}\nLevel {self.level} (1-{max_number})")
             
+            # Set focus back to entry
             self.entry.focus()
             
         except ValueError:
@@ -152,14 +181,19 @@ class ReactionTestGame:
         self.setup_ui()
 
     def setup_ui(self):
+        # Create game title
         self.title_label = ttk.Label(self.frame, text="Reaction Test", font=("Arial", 14, "bold"))
         self.title_label.pack(pady=(10, 5))
         
+        # Create reward display with coin icon
         self.reward_frame = ttk.Frame(self.frame)
         self.reward_frame.pack(pady=(5, 10))
         
+        # Calculate current reward
         batch_number = (self.level - 1) // 3
         base_reward = 1 + 2 * batch_number
+        
+        # Try to load currency icon
         self.currency_icon = None
         try:
             import os

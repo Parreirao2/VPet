@@ -1,21 +1,34 @@
+"""Pet Components Module
+
+This module contains the core components for the virtual pet system, including:
+- Pet state management
+- Stats tracking and modification
+- Growth and evolution systems
+- Behavior patterns
+"""
+
 import random
 from datetime import datetime, timedelta
 import json
 import os
 
 class PetStats:
+    """Manages the pet's statistics and attributes"""
+    
     def __init__(self, growth=None):
         self.growth = growth
+        # Initialize with default values
         self.stats = {
-            'hunger': 100,
-            'happiness': 100,
-            'energy': 100,
-            'health': 100,
-            'cleanliness': 100,
-            'social': 100,
-            'age': 0
+            'hunger': 100,      # 0-100, 0 is starving
+            'happiness': 100,   # 0-100, 0 is depressed
+            'energy': 100,      # 0-100, 0 is exhausted
+            'health': 100,      # 0-100, 0 is very sick
+            'cleanliness': 100, # 0-100, 0 is filthy
+            'social': 100,      # 0-100, 0 is lonely
+            'age': 0,           # Age in days
         }
         
+        # Add direct attribute access for common stats to fix errors
         self.hunger = self.stats['hunger']
         self.happiness = self.stats['happiness']
         self.energy = self.stats['energy']
@@ -23,14 +36,20 @@ class PetStats:
         self.cleanliness = self.stats['cleanliness']
         self.social = self.stats['social']
         self.age = self.stats['age']
+        
+        # Last update timestamp - moved up to ensure it's initialized early
         self.last_update = datetime.now()
+        
+        # Track last health reduction time for sickness
         self.last_health_reduction_time = datetime.now()
+        
+        # Stat decay rates (points per minute) - reduced by 4x as requested
         self.decay_rates = {
-            'hunger': 0.25,
-            'happiness': 0.2,
-            'energy': 0.125,
-            'cleanliness': 0.175,
-            'social': 0.15
+            'hunger': 0.25,      # Reduced from 1.0
+            'happiness': 0.2,   # Reduced from 0.8
+            'energy': 0.125,    # Reduced from 0.5
+            'cleanliness': 0.175, # Reduced from 0.7
+            'social': 0.15      # Reduced from 0.6
         }
         self.decay_rates = self._get_stage_adjusted_rates()
         

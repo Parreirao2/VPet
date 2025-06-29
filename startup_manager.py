@@ -1,3 +1,11 @@
+"""Startup Manager Module
+
+This module handles Windows startup functionality and provides utilities for:
+- Managing Windows startup registry entries
+- Verifying startup status
+- Enabling/disabling startup
+"""
+
 import os
 import winreg
 import sys
@@ -5,7 +13,7 @@ import logging
 from datetime import datetime
 
 class StartupManager:
-
+    """Manages Windows startup functionality"""
     
     def __init__(self, app_name="TamagotchiPet"):
         self.app_name = app_name
@@ -13,15 +21,15 @@ class StartupManager:
         self.logger = self._setup_logger()
     
     def _setup_logger(self):
-
+        """Setup logging for startup operations"""
         logger = logging.getLogger('StartupManager')
         logger.setLevel(logging.INFO)
         
-
+        # Create logs directory if it doesn't exist
         logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
         os.makedirs(logs_dir, exist_ok=True)
         
-
+        # Setup file handler
         log_file = os.path.join(logs_dir, 'startup.log')
         handler = logging.FileHandler(log_file)
         handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
@@ -30,13 +38,13 @@ class StartupManager:
         return logger
     
     def is_enabled(self):
-
+        """Check if application is set to run at startup"""
         try:
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.key_path, 0, winreg.KEY_READ)
             value, _ = winreg.QueryValueEx(key, self.app_name)
             winreg.CloseKey(key)
             
-
+            # Verify if the path is correct
             current_exe = sys.executable
             return value == f'"{current_exe}" "{os.path.abspath(sys.argv[0])}"'
             
@@ -44,13 +52,13 @@ class StartupManager:
             return False
     
     def enable(self):
-
+        """Enable application to run at startup"""
         try:
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.key_path, 0, winreg.KEY_WRITE)
             executable = sys.executable
             script_path = os.path.abspath(sys.argv[0])
             
-
+            # Set registry value
             winreg.SetValueEx(
                 key,
                 self.app_name,
@@ -68,7 +76,7 @@ class StartupManager:
             return False
     
     def disable(self):
-
+        """Disable application from running at startup"""
         try:
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.key_path, 0, winreg.KEY_WRITE)
             winreg.DeleteValue(key, self.app_name)
@@ -82,7 +90,7 @@ class StartupManager:
             return False
     
     def verify_startup_status(self):
-
+        """Verify startup status and fix if necessary"""
         is_enabled = self.is_enabled()
         should_be_enabled = self._get_setting_from_config()
         
@@ -96,7 +104,7 @@ class StartupManager:
         return True
     
     def _get_setting_from_config(self):
-
+        """Get startup setting from settings file"""
         try:
             settings_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),

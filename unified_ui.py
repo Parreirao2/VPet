@@ -1,3 +1,14 @@
+"""Unified UI Module
+
+This module provides a comprehensive UI system for the Tamagotchi application,
+combining simple and modern styling options with all UI components in one place.
+It includes:
+- Color schemes and themes
+- Custom widgets with consistent styling
+- UI panels for pet stats and interactions
+- Speech bubbles and other UI elements
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk, ImageDraw
@@ -8,81 +19,82 @@ from datetime import datetime
 import threading
 from startup_manager import StartupManager
 
-
+# ===== COLOR SCHEMES =====
+# Unified color scheme for both simple and modern UI styles
 COLORS = {
-    'primary': '#4a6baf',  
+    'primary': '#4a6baf',      # Main blue color
     'primary_light': '#7a9be0',
     'primary_dark': '#2a4b8f',
-    'secondary': '#ff9966',
-    'background': '#f5f7fa',   
-    'surface': '#ffffff',  
-    'text': '#333333',     
-    'text_light': '#666666',   
-    'success': '#4caf50',  
-    'warning': '#ff9800',  
-    'error': '#f44336',    
-    'disabled': '#cccccc',  
-    'tooltip_bg': '#f0f0f0',   
-    'tooltip_text': '#333333'  
+    'secondary': '#ff9966',    # Orange accent
+    'background': '#f5f7fa',   # Light gray background
+    'surface': '#ffffff',      # White surface
+    'text': '#333333',         # Dark text
+    'text_light': '#666666',   # Light text
+    'success': '#4caf50',      # Green
+    'warning': '#ff9800',      # Orange
+    'error': '#f44336',        # Red
+    'disabled': '#cccccc',      # Gray
+    'tooltip_bg': '#f0f0f0',   # Light gray background for tooltips
+    'tooltip_text': '#333333'  # Dark text for tooltips
 }
 
-
+# ===== BASE UI CLASSES =====
 
 class BaseUI:
-
+    """Base class for UI styling"""
     
     def __init__(self, root):
         self.root = root
         
-
+        # Configure basic styles
         self.style = ttk.Style()
         self.configure_styles()
     
     def configure_styles(self):
-
+        """Configure ttk styles - to be implemented by subclasses"""
         pass
 
 class SimpleUI(BaseUI):
-
+    """Manages simple UI styling for the application"""
     
     def configure_styles(self):
-
-
+        """Configure ttk styles for simple appearance"""
+        # Use a simple theme as base
         self.style.theme_use('clam')
         
-
+        # Configure basic button style
         self.style.configure('TButton',
                             padding=(10, 5),
                             font=('Arial', 10))
         
-
+        # Configure frame style
         self.style.configure('TFrame',
                             background=COLORS['surface'])
         
-
+        # Configure label style
         self.style.configure('TLabel',
                             background=COLORS['surface'],
                             foreground=COLORS['text'],
                             font=('Arial', 10))
         
-
+        # Configure title label style
         self.style.configure('Title.TLabel',
                             foreground=COLORS['primary'],
                             font=('Arial', 12, 'bold'))
         
-
+        # Configure progressbar style
         self.style.configure('Horizontal.TProgressbar',
                             background=COLORS['primary'])
         
-
+        # Configure critical progressbar style
         self.style.configure('Critical.Horizontal.TProgressbar',
                             background=COLORS['error'])
         
-
+        # Configure checkbutton style
         self.style.configure('TCheckbutton',
                             font=('Arial', 10))
         
-
+        # Configure notebook style
         self.style.configure('TNotebook',
                             background=COLORS['background'])
         
@@ -91,20 +103,20 @@ class SimpleUI(BaseUI):
                             font=('Arial', 10))
     
     def show_settings(self, pet_manager):
-
-
+        """Show settings window"""
+        # Create a new settings window instance and show it
         settings_window = SimpleSettingsWindow(self.root, pet_manager)
         settings_window.show_settings()
 
 class ModernUI(BaseUI):
-
+    """Manages modern UI styling for the application"""
     
     def configure_styles(self):
-
-
+        """Configure ttk styles for modern appearance"""
+        # Configure the default theme
         self.style.theme_use('clam')  # Use clam as base theme
         
-
+        # Configure TButton style
         self.style.configure('Modern.TButton',
                             background=COLORS['primary'],
                             foreground='white',
@@ -113,58 +125,58 @@ class ModernUI(BaseUI):
                             font=('Arial', 10),
                             padding=(10, 5))
         
-
+        # Map TButton states
         self.style.map('Modern.TButton',
                       background=[('active', COLORS['primary_light']),
                                  ('disabled', COLORS['disabled'])],
                       foreground=[('disabled', '#999999')])
         
-
+        # Configure TFrame style
         self.style.configure('Modern.TFrame',
                             background=COLORS['surface'])
         
-
+        # Configure TLabel style
         self.style.configure('Modern.TLabel',
                             background=COLORS['surface'],
                             foreground=COLORS['text'],
                             font=('Arial', 10))
         
-
+        # Configure TLabel title style
         self.style.configure('Title.TLabel',
                             background=COLORS['surface'],
                             foreground=COLORS['primary'],
                             font=('Arial', 12, 'bold'))
         
-
+        # Configure TProgressbar style
         self.style.configure('Modern.Horizontal.TProgressbar',
                             troughcolor=COLORS['background'],
                             background=COLORS['primary'],
                             thickness=10)
         
-
+        # Configure Critical TProgressbar style
         self.style.configure('Critical.Horizontal.TProgressbar',
                             troughcolor=COLORS['background'],
                             background=COLORS['error'],
                             thickness=10)
         
-
+        # Configure TCheckbutton style
         self.style.configure('Modern.TCheckbutton',
                             background=COLORS['surface'],
                             foreground=COLORS['text'],
                             font=('Arial', 10))
         
-
+        # Configure TRadiobutton style
         self.style.configure('Modern.TRadiobutton',
                             background=COLORS['surface'],
                             foreground=COLORS['text'],
                             font=('Arial', 10))
         
-
+        # Configure TScale style
         self.style.configure('Modern.Horizontal.TScale',
                             background=COLORS['surface'],
                             troughcolor=COLORS['background'])
         
-
+        # Configure TNotebook style
         self.style.configure('Modern.TNotebook',
                             background=COLORS['background'],
                             tabmargins=[2, 5, 2, 0])
@@ -180,15 +192,15 @@ class ModernUI(BaseUI):
                       foreground=[('selected', COLORS['primary'])])
     
     def show_settings(self, pet_manager):
-
-
+        """Show settings window with modern styling"""
+        # Create a new settings window instance and show it
         settings_window = ModernSettingsWindow(self.root, pet_manager)
         settings_window.show_settings()
 
-
+# ===== CUSTOM WIDGETS =====
 
 class SimpleButton(tk.Button):
-    
+    """A simple button with consistent styling"""
     
     def __init__(self, parent, text="Button", command=None, width=10, height=1, 
                  bg=COLORS['primary'], fg="white", **kwargs):
@@ -203,10 +215,10 @@ class SimpleButton(tk.Button):
                         **kwargs)
 
 class RoundedFrame(tk.Frame):
-    
+    """A frame with rounded corners"""
     
     def __init__(self, parent, bg=COLORS['surface'], corner_radius=10, **kwargs):
-        
+        # Remove transparency-related kwargs if present
         if 'highlightthickness' not in kwargs:
             kwargs['highlightthickness'] = 0
         if 'borderwidth' not in kwargs:
@@ -217,59 +229,59 @@ class RoundedFrame(tk.Frame):
         self.bg = bg
         self.parent_bg = parent.cget('bg') if hasattr(parent, 'cget') else COLORS['background']
         
-        
+        # Use a solid background color that matches the parent
         self.configure(bg=self.parent_bg)
         
-        
+        # Store references to prevent garbage collection
         self.bg_label = None
         self.bg_image = None
         
-        
+        # Create a rounded rectangle background after the widget is drawn
         self.after(10, self.create_rounded_bg)
         
-        
+        # Bind resize event to redraw the background
         self.bind('<Configure>', self._on_configure)
     
     def _on_configure(self, event):
-        
+        # Delay redraw to ensure correct dimensions
         self.after(10, self.create_rounded_bg)
     
     def create_rounded_bg(self):
-        
+        """Create a rounded rectangle background"""
         width = self.winfo_width()
         height = self.winfo_height()
         
-        
+        # Ensure minimum size
         if width < 2 or height < 2:
             self.after(50, self.create_rounded_bg)  # Try again later
             return
         
-        
+        # Clear previous background if it exists
         if self.bg_label:
             self.bg_label.destroy()
             self.bg_label = None
         
-        
+        # Create an image for the background
         image = Image.new('RGB', (width, height), self.parent_bg)
         draw = ImageDraw.Draw(image)
         
-        
+        # Draw rounded rectangle
         draw.rounded_rectangle(
             [(0, 0), (width, height)],
             radius=self.corner_radius,
             fill=self.bg
         )
         
-        
+        # Convert to PhotoImage and keep a reference
         self.bg_image = ImageTk.PhotoImage(image)
         
-        
+        # Create a label to display the background
         self.bg_label = tk.Label(self, image=self.bg_image, bg=self.parent_bg, borderwidth=0, highlightthickness=0)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.bg_label.lower()
 
 class SimpleSettingsWindow:
-    
+    """Settings window with simple styling"""
     
     def __init__(self, parent, pet_manager):
         self.parent = parent
@@ -279,22 +291,22 @@ class SimpleSettingsWindow:
         self.startup_manager = StartupManager()
     
     def show_settings(self):
-        
+        """Show settings window with tabs for different settings"""
         if self.window:
             self.window.destroy()
         
-        
+        # Create settings window with increased size for Advanced tab
         self.window = tk.Toplevel(self.parent)
         self.window.title("Pet Settings")
         self.window.geometry("700x700")  # Increased size to fit all content
         self.window.resizable(True, True)  # Allow resizing for better usability
         self.window.configure(bg=COLORS['background'])
         
-        
+        # Create notebook for tabs
         notebook = ttk.Notebook(self.window)
         notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        
+        # Create tabs - merged General and Appearance into one tab
         general_tab = ttk.Frame(notebook)
         save_tab = ttk.Frame(notebook)
         advanced_tab = ttk.Frame(notebook)
@@ -303,21 +315,21 @@ class SimpleSettingsWindow:
         notebook.add(save_tab, text="Save/Load")
         notebook.add(advanced_tab, text="Advanced")
         
-        
+        # Populate tabs
         self._create_general_tab(general_tab)  # This will now include appearance settings
         self._create_save_tab(save_tab)
         self._create_advanced_tab(advanced_tab)
     
     def _create_general_tab(self, parent):
-        
-        
+        """Create general settings tab (merged with appearance settings)"""
+        # Pet name frame
         name_frame = ttk.LabelFrame(parent, text="Pet Name", padding=10)
         name_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Current name
         ttk.Label(name_frame, text=f"Current Name: {self.pet_manager.name}").pack(anchor="w")
         
-        
+        # New name entry
         name_entry_frame = ttk.Frame(name_frame)
         name_entry_frame.pack(fill=tk.X, pady=5)
         
@@ -325,30 +337,31 @@ class SimpleSettingsWindow:
         name_entry = ttk.Entry(name_entry_frame)
         name_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        
+        # Change name button
         change_btn = SimpleButton(name_frame, text="Change Name", 
                                command=lambda: self.change_pet_name(name_entry.get()))
         change_btn.pack(pady=5)
         
-        
+        # Behavior settings frame
         behavior_frame = ttk.LabelFrame(parent, text="Behavior Settings", padding=10)
         behavior_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Always on top
         always_on_top_var = tk.BooleanVar(value=self.pet_manager.settings.get('always_on_top', True))
         ttk.Checkbutton(behavior_frame, text="Always on top", variable=always_on_top_var,
                        command=lambda: self.pet_manager.update_setting('always_on_top', always_on_top_var.get())).pack(anchor="w")
         
-        
+        # Start with Windows
         start_with_windows_var = tk.BooleanVar(value=self.startup_manager.is_enabled())
         ttk.Checkbutton(behavior_frame, text="Start with Windows", variable=start_with_windows_var,
                        command=lambda: self._toggle_startup(start_with_windows_var.get())).pack(anchor="w")
         
-              
+        # ===== APPEARANCE SETTINGS (merged from appearance tab) =====
+        # Size frame
         size_frame = ttk.LabelFrame(parent, text="Pet Size", padding=10)
         size_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Size slider with value label
         size_var = tk.IntVar(value=self.pet_manager.settings['pet_size'])
         size_label_frame = ttk.Frame(size_frame)
         size_label_frame.pack(fill=tk.X)
@@ -359,7 +372,7 @@ class SimpleSettingsWindow:
         size_slider = ttk.Scale(size_frame, from_=50, to=150, variable=size_var, orient=tk.HORIZONTAL)
         size_slider.pack(fill=tk.X)
         
-        
+        # Update label when slider moves
         def update_size_label(event=None):
             size_value_label.config(text=f"{size_var.get()}%")
             self.pet_manager.update_setting('pet_size', size_var.get())
@@ -367,11 +380,11 @@ class SimpleSettingsWindow:
         size_slider.bind("<Motion>", update_size_label)
         size_slider.bind("<ButtonRelease-1>", update_size_label)
         
-        
+        # Movement speed frame - matching the style of the Pet Size frame
         speed_frame = ttk.LabelFrame(parent, text="Movement Speed", padding=10)
         speed_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Movement speed slider with value label
         speed_var = tk.IntVar(value=self.pet_manager.settings['movement_speed'])
         speed_label_frame = ttk.Frame(speed_frame)
         speed_label_frame.pack(fill=tk.X)
@@ -379,11 +392,11 @@ class SimpleSettingsWindow:
         speed_value_label = ttk.Label(speed_label_frame, text=f"{speed_var.get()}/10")
         speed_value_label.pack(side=tk.RIGHT)
         
-        
+        # Create slider with same styling as the size slider
         speed_slider = ttk.Scale(speed_frame, from_=1, to=10, variable=speed_var, orient=tk.HORIZONTAL)
         speed_slider.pack(fill=tk.X)
         
-        
+        # Update label when slider moves
         def update_speed_label(event=None):
             speed_value_label.config(text=f"{speed_var.get()}/10")
             self.pet_manager.update_setting('movement_speed', speed_var.get())
@@ -392,23 +405,23 @@ class SimpleSettingsWindow:
         speed_slider.bind("<ButtonRelease-1>", update_speed_label)
     
     def _create_save_tab(self, parent):
-        
-        
+        """Create save/load tab"""
+        # Save frame
         save_frame = ttk.LabelFrame(parent, text="Save Pet", padding=10)
         save_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Save button
         save_btn = SimpleButton(save_frame, text="Save Current Pet", command=self.save_pet)
         save_btn.pack(pady=5)
         
-        
+        # Load frame
         load_frame = ttk.LabelFrame(parent, text="Load Pet", padding=10)
         load_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        
+        # Save files list
         ttk.Label(load_frame, text="Available Save Files:").pack(anchor="w")
         
-        
+        # Create listbox with scrollbar
         list_frame = ttk.Frame(load_frame)
         list_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
@@ -423,44 +436,44 @@ class SimpleSettingsWindow:
         
         scrollbar.config(command=save_listbox.yview)
         
-        
+        # Store reference to the listbox for updating after save
         self.save_listbox = save_listbox
         
-        
+        # Populate listbox
         for save_file in self.pet_manager.get_save_files():
             save_listbox.insert(tk.END, save_file)
         
-        
+        # Button frame
         button_frame = ttk.Frame(load_frame)
         button_frame.pack(fill=tk.X, pady=5)
         
-        
+        # Load button
         load_btn = SimpleButton(button_frame, text="Load Selected", 
                               command=lambda: self.load_selected_pet(save_listbox))
         load_btn.pack(side=tk.LEFT, padx=(0, 5))
         
-        
+        # Delete button
         delete_btn = SimpleButton(button_frame, text="Delete Selected", 
                                 command=lambda: self.delete_selected_pet(save_listbox),
                                 bg=COLORS['error'])
         delete_btn.pack(side=tk.LEFT)
         
-        
+        # Reset Pet frame
         reset_frame = ttk.LabelFrame(parent, text="Reset Pet", padding=10)
         reset_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Warning label
         ttk.Label(reset_frame, text="Warning: This will reset your pet to Baby stage with 0 days age and default stats.",
                  foreground=COLORS['error']).pack(pady=5)
         
-        
+        # Reset button
         reset_btn = SimpleButton(reset_frame, text="Reset Pet", 
                                command=self.reset_pet,
                                bg=COLORS['error'])
         reset_btn.pack(pady=5)
         
     def load_selected_pet(self, save_listbox):
-        
+        """Load the selected pet save file"""
         selected = save_listbox.curselection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select a save file to load.")
@@ -470,7 +483,7 @@ class SimpleSettingsWindow:
         self.window.destroy()
         
     def delete_selected_pet(self, save_listbox):
-        
+        """Delete the selected pet save file"""
         selected = save_listbox.curselection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select a save file to delete.")
@@ -482,19 +495,19 @@ class SimpleSettingsWindow:
             messagebox.showinfo("Success", "Save file deleted successfully.")
     
     def _create_appearance_tab(self, parent):
-        
-        
+        """Create appearance settings tab"""
+        # Pet color frame
         color_frame = ttk.LabelFrame(parent, text="Pet Color", padding=10)
         color_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Current color
         current_color = self.pet_manager.settings.get('pet_color', 'black')
         ttk.Label(color_frame, text=f"Current Color: {current_color.title()}").pack(anchor="w")
         
-        
+        # Color selection
         color_var = tk.StringVar(value=current_color)
         
-        
+        # Create radio buttons for each color option
         ttk.Radiobutton(color_frame, text="Black", variable=color_var, value="black",
                        command=lambda: self._update_pet_color(color_var.get())).pack(anchor="w", pady=2)
         ttk.Radiobutton(color_frame, text="Blue", variable=color_var, value="blue",
@@ -506,7 +519,7 @@ class SimpleSettingsWindow:
         size_frame = ttk.LabelFrame(parent, text="Pet Size", padding=10)
         size_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Size slider with value label
         size_var = tk.IntVar(value=self.pet_manager.settings['pet_size'])
         size_label_frame = ttk.Frame(size_frame)
         size_label_frame.pack(fill=tk.X)
@@ -517,7 +530,7 @@ class SimpleSettingsWindow:
         size_slider = ttk.Scale(size_frame, from_=50, to=150, variable=size_var, orient=tk.HORIZONTAL)
         size_slider.pack(fill=tk.X)
         
-        
+        # Update label when slider moves
         def update_size_label(event=None):
             size_value_label.config(text=f"{size_var.get()}%")
             self.pet_manager.update_setting('pet_size', size_var.get())
@@ -529,7 +542,7 @@ class SimpleSettingsWindow:
         speed_frame = ttk.LabelFrame(parent, text="Movement Speed", padding=10)
         speed_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Movement speed slider with value label
         speed_var = tk.IntVar(value=self.pet_manager.settings['movement_speed'])
         speed_label_frame = ttk.Frame(speed_frame)
         speed_label_frame.pack(fill=tk.X)
@@ -537,11 +550,11 @@ class SimpleSettingsWindow:
         speed_value_label = ttk.Label(speed_label_frame, text=f"{speed_var.get()}/10")
         speed_value_label.pack(side=tk.RIGHT)
         
-        
+        # Create slider with same styling as the size slider
         speed_slider = ttk.Scale(speed_frame, from_=1, to=10, variable=speed_var, orient=tk.HORIZONTAL)
         speed_slider.pack(fill=tk.X)
         
-        
+        # Update label when slider moves
         def update_speed_label(event=None):
             speed_value_label.config(text=f"{speed_var.get()}/10")
             self.pet_manager.update_setting('movement_speed', speed_var.get())
@@ -550,49 +563,49 @@ class SimpleSettingsWindow:
         speed_slider.bind("<ButtonRelease-1>", update_speed_label)
 
     def _create_advanced_tab(self, parent):
-        
-        
+        """Create advanced settings tab with scrollbar"""
+        # Create a canvas with scrollbar for the advanced tab
         canvas_frame = ttk.Frame(parent)
         canvas_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        
+        # Add scrollbar
         scrollbar = ttk.Scrollbar(canvas_frame, orient=tk.VERTICAL)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        
+        # Create canvas
         canvas = tk.Canvas(canvas_frame, yscrollcommand=scrollbar.set, bg=COLORS['background'])
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        
+        # Configure scrollbar to scroll canvas
         scrollbar.config(command=canvas.yview)
         
-        
+        # Create a frame inside the canvas for all content
         content_frame = ttk.Frame(canvas, padding=5)
         canvas_window = canvas.create_window((0, 0), window=content_frame, anchor='nw', width=canvas.winfo_width())
         
-        
+        # Update scroll region when the size of the content frame changes
         def configure_scroll_region(event):
             canvas.configure(scrollregion=canvas.bbox('all'))
         content_frame.bind('<Configure>', configure_scroll_region)
         
-        
+        # Update canvas width when parent resizes
         def configure_canvas_width(event):
             canvas_width = event.width - scrollbar.winfo_width() - 10
             canvas.itemconfig(canvas_window, width=canvas_width)
         canvas.bind('<Configure>', configure_canvas_width)
         
-        
+        # Pet Color frame - Added to Advanced tab
         color_frame = ttk.LabelFrame(content_frame, text="Pet Color", padding=10)
         color_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Current color
         current_color = self.pet_manager.settings.get('pet_color', 'black')
         ttk.Label(color_frame, text=f"Current Color: {current_color.title()}").pack(anchor="w")
         
-        
+        # Color selection
         color_var = tk.StringVar(value=current_color)
         
-        
+        # Create radio buttons for each color option
         ttk.Radiobutton(color_frame, text="Black", variable=color_var, value="black",
                        command=lambda: self._update_pet_color(color_var.get())).pack(anchor="w", pady=2)
         ttk.Radiobutton(color_frame, text="Blue", variable=color_var, value="blue",
@@ -600,26 +613,26 @@ class SimpleSettingsWindow:
         ttk.Radiobutton(color_frame, text="Pink", variable=color_var, value="pink",
                        command=lambda: self._update_pet_color(color_var.get())).pack(anchor="w", pady=2)
         
-        
+        # Add description label
         ttk.Label(color_frame, text="Changes to pet color will take effect immediately.", 
                  wraplength=400, font=("Arial", 8)).pack(anchor="w", pady=(5, 0))
         
-        
+        # Pet Age and Stage frame
         age_frame = ttk.LabelFrame(content_frame, text="Pet Age and Stage", padding=10)
         age_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Current age and stage display
         ttk.Label(age_frame, text=f"Current Age: {round(self.pet_manager.pet_state.stats.get_stat('age'), 1)} days").pack(anchor="w")
         ttk.Label(age_frame, text=f"Current Stage: {self.pet_manager.pet_state.stage}").pack(anchor="w")
         
-        
+        # Age modification
         age_entry_frame = ttk.Frame(age_frame)
         age_entry_frame.pack(fill=tk.X, pady=5)
         ttk.Label(age_entry_frame, text=f"Set Age (days) (Current: {round(self.pet_manager.pet_state.stats.get_stat('age'), 1)}):").pack(side=tk.LEFT, padx=(0, 5))
         age_entry = ttk.Entry(age_entry_frame, width=10)
         age_entry.pack(side=tk.LEFT)
         
-        
+        # Stage selection
         stage_frame = ttk.Frame(age_frame)
         stage_frame.pack(fill=tk.X, pady=5)
         ttk.Label(stage_frame, text="Set Stage:").pack(side=tk.LEFT, padx=(0, 5))
@@ -627,16 +640,16 @@ class SimpleSettingsWindow:
         stage_combo = ttk.Combobox(stage_frame, textvariable=stage_var, values=['Baby', 'Child', 'Teen', 'Adult'], state='readonly')
         stage_combo.pack(side=tk.LEFT)
         
-        
+        # Apply button for age and stage
         apply_btn = SimpleButton(age_frame, text="Apply Changes", 
                                command=lambda: self._apply_advanced_changes(age_entry.get(), stage_var.get()))
         apply_btn.pack(pady=5)
         
-        
+        # Poop Frequency frame
         poop_frame = ttk.LabelFrame(content_frame, text="Poop Frequency", padding=10)
         poop_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Poop frequency slider with value label
         poop_var = tk.DoubleVar(value=self.pet_manager.settings.get('poop_frequency', 0.5))
         poop_label_frame = ttk.Frame(poop_frame)
         poop_label_frame.pack(fill=tk.X)
@@ -647,16 +660,16 @@ class SimpleSettingsWindow:
         poop_slider = ttk.Scale(poop_frame, from_=0.1, to=2.0, variable=poop_var, orient=tk.HORIZONTAL)
         poop_slider.pack(fill=tk.X)
         
-        
+        # Update label visually when slider moves
         def update_poop_label_visual(event=None):
             poop_value_label.config(text=f"{poop_var.get():.1f}")
 
-        
+        # Update system and save settings when slider is released
         def update_poop_label_complete(event=None):
             value = poop_var.get()
             poop_value_label.config(text=f"{value:.1f}")
             self.pet_manager.update_setting('poop_frequency', value)
-            
+            # Also update the poop system directly if it exists
             if hasattr(self.pet_manager, 'poop_system') and self.pet_manager.poop_system:
                 self.pet_manager.poop_system.poop_chance = value
                 print(f"Poop frequency updated to {value:.1f}")
@@ -664,58 +677,58 @@ class SimpleSettingsWindow:
         poop_slider.bind("<Motion>", update_poop_label_visual)
         poop_slider.bind("<ButtonRelease-1>", update_poop_label_complete)
         
-        
+        # Add description label
         ttk.Label(poop_frame, text="Lower values mean less frequent poops, higher values mean more frequent poops.", 
                  wraplength=400, font=("Arial", 8)).pack(anchor="w", pady=(5, 0))
         
-        
+        # Stat Depletion Rates frame with increased height
         depletion_frame = ttk.LabelFrame(content_frame, text="Stat Depletion Rates", padding=10)
         depletion_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        
+        # Add description label at the top of the frame
         ttk.Label(depletion_frame, text="Adjust how quickly each stat decreases over time. Higher values mean faster depletion.", 
                  wraplength=400, font=("Arial", 9)).pack(anchor="w", pady=(0, 10))
         
-        
+        # Create sliders for each stat with better spacing and clear labels
         for stat in ['hunger', 'happiness', 'energy', 'cleanliness', 'social']:
-            
+            # Create a main frame for this stat with a clear border
             stat_frame = ttk.Frame(depletion_frame)
             stat_frame.pack(fill=tk.X, pady=8)  # Increased vertical padding
             
-            
+            # Create a label frame with the stat name as the title for better visibility
             stat_label_frame = ttk.LabelFrame(stat_frame, text=f"{stat.title()} Rate", padding=5)
             stat_label_frame.pack(fill=tk.X, expand=True)
             
-            
+            # Create a frame for the slider and value display inside the label frame
             slider_frame = ttk.Frame(stat_label_frame)
             slider_frame.pack(fill=tk.X, expand=True, pady=3)
             
-            
+            # Get current rate from pet manager if available
             current_rate = 0.1
             if hasattr(self.pet_manager.pet_state, 'stats') and hasattr(self.pet_manager.pet_state.stats, 'decay_rates'):
                 current_rate = self.pet_manager.pet_state.stats.decay_rates.get(stat, 0.1)
             
             rate_var = tk.DoubleVar(value=current_rate)
             
-            
+            # Add value label with more space
             value_label = ttk.Label(slider_frame, text=f"{rate_var.get():.1f}", width=5)
             value_label.pack(side=tk.RIGHT, padx=(5, 0))
             
-            
+            # Create slider with better visibility
             rate_slider = ttk.Scale(slider_frame, from_=0.1, to=2.0, variable=rate_var, orient=tk.HORIZONTAL)
             rate_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, pady=3, padx=5)
             
-            
+            # Add min/max labels below the slider for better understanding
             slider_labels_frame = ttk.Frame(stat_label_frame)
             slider_labels_frame.pack(fill=tk.X, padx=5)
             ttk.Label(slider_labels_frame, text="Slow", font=("Arial", 8)).pack(side=tk.LEFT)
             ttk.Label(slider_labels_frame, text="Fast", font=("Arial", 8)).pack(side=tk.RIGHT)
             
-            
+            # Update label visually when slider moves
             def update_rate_visual(event, v=rate_var, lbl=value_label):
                 lbl.config(text=f"{v.get():.1f}")
 
-            
+            # Update system and save settings when slider is released
             def update_rate_complete(event, s=stat, v=rate_var, lbl=value_label):
                 value = v.get()
                 lbl.config(text=f"{value:.1f}")
@@ -725,20 +738,20 @@ class SimpleSettingsWindow:
             rate_slider.bind("<ButtonRelease-1>", update_rate_complete)
 
     def _apply_advanced_changes(self, new_age, new_stage):
-        
+        """Apply changes from advanced settings"""
         try:
-            
+            # Update age if provided
             if new_age.strip():
                 age = float(new_age)
                 if 0 <= age <= 1000:  # Reasonable limit
                     self.pet_manager.pet_state.stats['age'] = age
-                    
+                    # Force evolution check after age change
                     self.pet_manager.check_evolution()
                 else:
                     self.show_notification("Invalid Age", "Age must be between 0 and 1000 days", COLORS['warning'])
                     return
             
-            
+            # Update stage if changed
             if new_stage != self.pet_manager.pet_state.stage:
                 if self.pet_manager.evolve_to(new_stage):
                     self.show_notification("Stage Updated", f"Pet evolved to {new_stage} stage", COLORS['success'])
@@ -752,23 +765,23 @@ class SimpleSettingsWindow:
             self.show_notification("Invalid Input", "Please enter a valid number for age", COLORS['error'])
 
     def _update_depletion_rate(self, stat, value):
-        
-        
+        """Update the depletion rate for a specific stat without showing notifications"""
+        # Update the decay rate in the pet's stats object
         if hasattr(self.pet_manager.pet_state, 'stats') and hasattr(self.pet_manager.pet_state.stats, 'decay_rates'):
             self.pet_manager.pet_state.stats.decay_rates[stat] = value
-            
+            # Also update the setting in the settings file
             self.pet_manager.update_setting(f'stat_depletion_{stat}', value)
             print(f"Updated {stat} depletion rate to {value:.1f}")
-            
+            # No notification for slider adjustments to avoid popup spam
         else:
-            
+            # Only show notification for errors
             self.show_notification("Update Failed", f"Could not update {stat} depletion rate", COLORS['error'])
     
     def change_pet_name(self, new_name):
-        
+        """Change the pet's name"""
         if new_name and new_name.strip():
             self.pet_manager.name = new_name.strip()
-            
+            # Update the current name label in the settings window
             for widget in self.window.winfo_children():
                 if isinstance(widget, ttk.Notebook):
                     for tab in widget.winfo_children():
@@ -781,29 +794,31 @@ class SimpleSettingsWindow:
             self.show_notification("Name Changed", f"Pet name changed to {new_name}", COLORS['success'])
             
     def _update_pet_color(self, color):
-        
+        """Update the pet color setting and reload animations"""
+        # Get the old color before updating
         old_color = self.pet_manager.settings.get('pet_color', 'black')
         
-        
+        # Update the setting
         self.pet_manager.update_setting('pet_color', color)
         
-        
+        # Use the handle_color_change method if available
         if hasattr(self.pet_manager, 'animation') and hasattr(self.pet_manager.animation, 'handle_color_change'):
             self.pet_manager.animation.handle_color_change(old_color, color)
         else:
-            
+            # Fallback to the old method if handle_color_change is not available
+            # Store current direction before reloading animations
             current_direction = None
             if hasattr(self.pet_manager, 'pet_state') and hasattr(self.pet_manager.pet_state, 'direction'):
                 current_direction = self.pet_manager.pet_state.direction
             
-            
+            # Reload animations to apply the new color
             if hasattr(self.pet_manager, 'animation') and hasattr(self.pet_manager.animation, 'load_animations'):
-                
+                # Clear existing animations cache first
                 self.pet_manager.animation.animations = {}
-                
+                # Then reload with new color
                 self.pet_manager.animation.load_animations()
                 
-                
+                # Force reload of current stage animations
                 current_stage = self.pet_manager.pet_state.stage
                 if hasattr(self.pet_manager, 'load_stage_animations'):
                     self.pet_manager.load_stage_animations(current_stage)

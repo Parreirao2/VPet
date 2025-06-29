@@ -1,3 +1,9 @@
+"""Speech Bubble Module
+
+This module contains the implementation of a stylized speech bubble system
+for the virtual pet application, replacing the simple text notifications.
+"""
+
 import tkinter as tk
 import math
 import random
@@ -5,7 +11,7 @@ from PIL import Image, ImageDraw, ImageTk
 from unified_ui import COLORS
 
 class SpeechBubble:
-
+    """Creates stylized speech bubbles for pet interactions using Toplevel windows"""
     
     def __init__(self, canvas, parent):
         self.canvas = canvas
@@ -15,7 +21,7 @@ class SpeechBubble:
         self._bubble_timer = None
         self._update_position_timer = None  # Timer for updating bubble position
         
-
+        # Define different response types for various interactions
         self.responses = {
             'feed': [
                 "Yum yum!", 
