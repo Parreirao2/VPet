@@ -7,7 +7,6 @@ class CurrencyDisplay:
         self.frame = ttk.Frame(parent)
         self.coins = initial_coins
         
-        # Load currency image from img_assets folder
         try:
             self.currency_img = ImageTk.PhotoImage(
                 Image.open('img_assets/currency.png').resize((24, 24))
@@ -31,11 +30,7 @@ class CurrencyDisplay:
 def create_status_bar(parent):
     status_frame = ttk.Frame(parent)
     
-    # Currency display component
     currency = CurrencyDisplay(status_frame)
     currency.frame.pack(side='right', padx=10)
     
-    # Removed action buttons section
     return status_frame
-
-# Other status elements can be added here

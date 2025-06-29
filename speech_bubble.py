@@ -1,9 +1,3 @@
-"""Speech Bubble Module
-
-This module contains the implementation of a stylized speech bubble system
-for the virtual pet application, replacing the simple text notifications.
-"""
-
 import tkinter as tk
 import math
 import random
@@ -11,17 +5,15 @@ from PIL import Image, ImageDraw, ImageTk
 from unified_ui import COLORS
 
 class SpeechBubble:
-    """Creates stylized speech bubbles for pet interactions using Toplevel windows"""
     
     def __init__(self, canvas, parent):
         self.canvas = canvas
         self.parent = parent
         self.bubble_window = None
-        self.bubble_duration = 5000  # 5 seconds display time
+        self.bubble_duration = 5000
         self._bubble_timer = None
-        self._update_position_timer = None  # Timer for updating bubble position
+        self._update_position_timer = None
         
-        # Define different response types for various interactions
         self.responses = {
             'feed': [
                 "Yum yum!", 
@@ -264,130 +256,94 @@ class SpeechBubble:
         }
     
     def show_bubble(self, message_type, custom_message=None):
-        """Show a speech bubble with appropriate message for the interaction type"""
-        # Get appropriate responses for this message type
         responses = self.responses.get(message_type, self.responses['default'])
         
-        # Use custom message if provided, otherwise pick a random response
         message = custom_message if custom_message else random.choice(responses)
         
-        # Create the speech bubble
         self._create_bubble(message)
     
     def _create_bubble(self, message):
-        """Create a stylized speech bubble using a Toplevel window"""
-        # Clear any existing bubble
         self.clear_bubble()
         
-        # Get pet position (center of canvas)
         pet_x = self.parent.winfo_x() + self.canvas.winfo_width() // 2
-        pet_y = self.parent.winfo_y() + 100  # Position closer to the pet's head
+        pet_y = self.parent.winfo_y() + 100
         
-        # Create bubble window
         self.bubble_window = tk.Toplevel(self.parent)
-        self.bubble_window.overrideredirect(True)  # No window decorations
-        self.bubble_window.attributes('-topmost', True)  # Keep on top
-        self.bubble_window.attributes('-transparentcolor', 'white')  # Make white transparent
+        self.bubble_window.overrideredirect(True)
+        self.bubble_window.attributes('-topmost', True)
+        self.bubble_window.attributes('-transparentcolor', 'white')
         
-        # Use a solid background color that will be made transparent
         self.bubble_window.configure(bg='white')
         
-        # Calculate bubble size based on message length and content
-        padding = 12  # Reduced padding for more compact bubbles
+        padding = 12
         
-        # Create a temporary label to measure text dimensions accurately
         temp_label = tk.Label(self.bubble_window, text=message, font=("Comic Sans MS", 11, "bold"), wraplength=180)
-        temp_label.update_idletasks()  # Force geometry calculation
+        temp_label.update_idletasks()
         
-        # Get actual text dimensions
         text_width = temp_label.winfo_reqwidth()
         text_height = temp_label.winfo_reqheight()
         temp_label.destroy()
         
-        # Calculate bubble dimensions with proper margins
-        bubble_width = min(text_width + padding * 2, 200)  # Reduced max width
-        bubble_height = text_height + padding * 2  # Dynamic height based on text
+        bubble_width = min(text_width + padding * 2, 200)
+        bubble_height = text_height + padding * 2
         
-        # Add extra padding to ensure corners are fully visible
-        canvas_width = bubble_width + 40  # Extra space for corners and borders
-        canvas_height = bubble_height + 40  # Extra space for corners, borders and tail
+        canvas_width = bubble_width + 40
+        canvas_height = bubble_height + 40
         
-        # Create canvas for drawing the bubble
         bubble_canvas = tk.Canvas(
             self.bubble_window, 
             width=canvas_width,
             height=canvas_height,
-            bg='white',  # Use white instead of systemTransparent
+            bg='white',
             highlightthickness=0
         )
         bubble_canvas.pack()
         
-        # Draw bubble background with proper margins to avoid clipping
-        # Coordinates adjusted to ensure full visibility of corners
-        corner_radius = 15  # Consistent corner radius
+        corner_radius = 15
         
-        # Top left corner - with consistent styling
         bubble_canvas.create_arc(15, 15, 15 + corner_radius*2, 15 + corner_radius*2, 
                                 start=90, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
-        # Top right corner
         bubble_canvas.create_arc(bubble_width + 15 - corner_radius*2, 15, bubble_width + 15, 15 + corner_radius*2, 
                                 start=0, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
-        # Bottom left corner
         bubble_canvas.create_arc(15, bubble_height + 15 - corner_radius*2, 15 + corner_radius*2, bubble_height + 15, 
                                 start=180, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
-        # Bottom right corner
         bubble_canvas.create_arc(bubble_width + 15 - corner_radius*2, bubble_height + 15 - corner_radius*2, 
                                 bubble_width + 15, bubble_height + 15, 
                                 start=270, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
         
-        # Fill in the middle parts
-        # Top and bottom rectangles
         bubble_canvas.create_rectangle(15 + corner_radius, 15, bubble_width + 15 - corner_radius, 15 + corner_radius, 
                                       fill="#FFFFCC", outline="#FFFFCC")
         bubble_canvas.create_rectangle(15 + corner_radius, bubble_height + 15 - corner_radius, 
                                       bubble_width + 15 - corner_radius, bubble_height + 15, 
                                       fill="#FFFFCC", outline="#FFFFCC")
-        # Left and right rectangles
         bubble_canvas.create_rectangle(15, 15 + corner_radius, 15 + corner_radius, bubble_height + 15 - corner_radius, 
                                       fill="#FFFFCC", outline="#FFFFCC")
         bubble_canvas.create_rectangle(bubble_width + 15 - corner_radius, 15 + corner_radius, 
                                       bubble_width + 15, bubble_height + 15 - corner_radius, 
                                       fill="#FFFFCC", outline="#FFFFCC")
-        # Center rectangle
         bubble_canvas.create_rectangle(15 + corner_radius, 15 + corner_radius, 
                                       bubble_width + 15 - corner_radius, bubble_height + 15 - corner_radius, 
                                       fill="#FFFFCC", outline="#FFFFCC")
         
-        # Draw border lines with smooth continuous stroke
-        # Create a polygon for the entire border instead of separate lines
         border_points = [
-            # Start at top-left corner
             15 + corner_radius, 15,
-            # Top edge
             bubble_width + 15 - corner_radius, 15,
-            # Right edge
             bubble_width + 15, 15 + corner_radius,
             bubble_width + 15, bubble_height + 15 - corner_radius,
-            # Bottom edge
             bubble_width + 15 - corner_radius, bubble_height + 15,
             15 + corner_radius, bubble_height + 15,
-            # Left edge
             15, bubble_height + 15 - corner_radius,
             15, 15 + corner_radius,
-            # Back to start
             15 + corner_radius, 15
         ]
         
-        # Create outline as a polygon with no fill
         bubble_canvas.create_polygon(border_points, fill="#FFFFCC", outline="", width=0)
         
-        # Draw bubble tail/pointer with matching style (no outline) - pointing upward to the pet
         tail_points = [
-            (bubble_width + 15) // 2 + 5, bubble_height + 30,  # Bottom point of tail (pointing to pet)
-            (bubble_width + 15) // 2 - 5, bubble_height + 15,  # Left point (connected to bubble)
-            (bubble_width + 15) // 2 + 15, bubble_height + 15   # Right point (connected to bubble)
+            (bubble_width + 15) // 2 + 5, bubble_height + 30,
+            (bubble_width + 15) // 2 - 5, bubble_height + 15,
+            (bubble_width + 15) // 2 + 15, bubble_height + 15
         ]
-        # Fill with same color as bubble
         bubble_canvas.create_polygon(
             tail_points,
             fill="#FFFFCC",
@@ -395,42 +351,34 @@ class SpeechBubble:
             width=0
         )
         
-        # Add text with proper wrapping and centering
         bubble_canvas.create_text(
-            (bubble_width + 30) // 2,  # Horizontally centered in the bubble
-            (bubble_height + 30) // 2,  # Vertically centered in the bubble
+            (bubble_width + 30) // 2,
+            (bubble_height + 30) // 2,
             text=message,
             font=("Comic Sans MS", 11, "bold"),
             fill="black",
-            width=bubble_width - padding,  # Wrap text if needed
-            justify=tk.CENTER,  # Center-align the text
-            anchor="center"  # Ensure text is centered at the specified position
+            width=bubble_width - padding,
+            justify=tk.CENTER,
+            anchor="center"
         )
         
-        # Position the bubble window closer to the pet
         self._update_bubble_position(canvas_width, canvas_height)
         
-        # Start position update timer to make bubble follow pet
         self._start_position_updates(canvas_width, canvas_height)
         
-        # Increase display duration for longer messages
-        display_time = max(self.bubble_duration, len(message) * 100)  # Longer time for longer messages
+        display_time = max(self.bubble_duration, len(message) * 100)
         self._bubble_timer = self.parent.after(display_time, self.clear_bubble)
     
     def _update_bubble_position(self, canvas_width, canvas_height):
-        """Update the bubble position to follow the pet"""
         if not self.bubble_window:
             return
             
-        # Get current pet position (center of canvas)
         pet_x = self.parent.winfo_x() + self.canvas.winfo_width() // 2
-        pet_y = self.parent.winfo_y() + 100  # Position closer to the pet's head
+        pet_y = self.parent.winfo_y() + 100
         
-        # Calculate bubble position (centered above pet)
         bubble_x = max(0, pet_x - canvas_width // 2)
-        bubble_y = max(0, pet_y - canvas_height)  # No extra margin to be closer to pet
+        bubble_y = max(0, pet_y - canvas_height)
         
-        # Adjust if bubble would go off-screen
         screen_width = self.parent.winfo_screenwidth()
         screen_height = self.parent.winfo_screenheight()
         if bubble_x + canvas_width > screen_width:
@@ -438,27 +386,20 @@ class SpeechBubble:
         if bubble_y < 0:
             bubble_y = 0
         
-        # Update bubble position
         self.bubble_window.geometry(f"+{bubble_x}+{bubble_y}")
     
     def _start_position_updates(self, canvas_width, canvas_height):
-        """Start periodic updates of bubble position to follow pet"""
-        # Cancel any existing update timer
         if self._update_position_timer:
             self.parent.after_cancel(self._update_position_timer)
         
-        # Function to update position and reschedule itself
         def update_loop():
             if self.bubble_window:
                 self._update_bubble_position(canvas_width, canvas_height)
                 self._update_position_timer = self.parent.after(50, update_loop)
         
-        # Start the update loop
         self._update_position_timer = self.parent.after(50, update_loop)
     
     def clear_bubble(self):
-        """Clear the speech bubble"""
-        # Cancel any existing timers
         if self._bubble_timer:
             self.parent.after_cancel(self._bubble_timer)
             self._bubble_timer = None
@@ -467,7 +408,6 @@ class SpeechBubble:
             self.parent.after_cancel(self._update_position_timer)
             self._update_position_timer = None
         
-        # Destroy bubble window if it exists
         if self.bubble_window:
             self.bubble_window.destroy()
             self.bubble_window = None
