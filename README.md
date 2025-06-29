@@ -180,11 +180,4 @@ This application is built with:
 - `frames/`: Animation frame images for different pet stages and colors
 - `img_assets/`: Food, item, and currency images
 
-## 📄 License
 
-[Your License Information Here]
-
-## 👏 Acknowledgements
-
-- Pixel art assets for the pet and items
-- Contributors and testers
