@@ -302,4 +302,3 @@ class PoopSystem:
             removed_poop = self.poops.pop(index)
             return True
         return False
-    
