@@ -18,7 +18,7 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 
 ## 🖥️ Demo
 
-![Virtual Pet Demo](img_assets/VPet_demo.gif)
+![Virtual Pet Demo](img_assets/VPet_Demo.gif)
 
 
 
