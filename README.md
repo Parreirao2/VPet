@@ -16,6 +16,11 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 <img src="frames/Adult_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
 
 
+## 🖥️ Demo
+
+<img src="img_assets/VPet_demo.gif" alt="Virtual Pet Demo" width="1000"/>
+
+
 
 ## ✨ Features
 
