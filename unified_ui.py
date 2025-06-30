@@ -28,6 +28,11 @@ COLORS = {
 class BaseUI:
     def __init__(self, root):
         self.root = root
+
+class BaseUI:
+    
+    def __init__(self, root):
+        self.root = root
         self.style = ttk.Style()
         self.configure_styles()
     
@@ -40,6 +45,16 @@ class SimpleUI(BaseUI):
         self.style.configure('TButton',
                             padding=(10, 5),
                             font=('Arial', 10))
+        self.style.configure('TFrame',
+                            background=COLORS['surface'])
+    
+    def configure_styles(self):
+        self.style.theme_use('clam')
+        
+        self.style.configure('TButton',
+                            padding=(10, 5),
+                            font=('Arial', 10))
+        
         self.style.configure('TFrame',
                             background=COLORS['surface'])
         self.style.configure('TLabel',
@@ -55,6 +70,19 @@ class SimpleUI(BaseUI):
                             background=COLORS['error'])
         self.style.configure('TCheckbutton',
                             font=('Arial', 10))
+        
+        self.style.configure('Title.TLabel',
+                            foreground=COLORS['primary'],
+                            font=('Arial', 12, 'bold'))
+        
+        self.style.configure('Horizontal.TProgressbar',
+                            background=COLORS['primary'])
+        
+        self.style.configure('Critical.Horizontal.TProgressbar',
+                            background=COLORS['error'])
+        
+        self.style.configure('TCheckbutton',
+                            font=('Arial', 10))
         self.style.configure('TNotebook',
                             background=COLORS['background'])
         self.style.configure('TNotebook.Tab',
@@ -68,6 +96,9 @@ class SimpleUI(BaseUI):
 class ModernUI(BaseUI):
     def configure_styles(self):
         self.style.theme_use('clam')
+    
+    def configure_styles(self):
+        self.style.theme_use('clam')
         self.style.configure('Modern.TButton',
                             background=COLORS['primary'],
                             foreground='white',
@@ -79,6 +110,9 @@ class ModernUI(BaseUI):
                       background=[('active', COLORS['primary_light']),
                                  ('disabled', COLORS['disabled'])],
                       foreground=[('disabled', '#999999')])
+        self.style.configure('Modern.TFrame',
+                            background=COLORS['surface'])
+        
         self.style.configure('Modern.TFrame',
                             background=COLORS['surface'])
         self.style.configure('Modern.TLabel',
@@ -108,6 +142,10 @@ class ModernUI(BaseUI):
         self.style.configure('Modern.Horizontal.TScale',
                             background=COLORS['surface'],
                             troughcolor=COLORS['background'])
+        
+        self.style.configure('Modern.Horizontal.TScale',
+                            background=COLORS['surface'],
+                            troughcolor=COLORS['background'])
         self.style.configure('Modern.TNotebook',
                             background=COLORS['background'],
                             tabmargins=[2, 5, 2, 0])
@@ -123,6 +161,8 @@ class ModernUI(BaseUI):
     def show_settings(self, pet_manager):
         settings_window = ModernSettingsWindow(self.root, pet_manager)
         settings_window.show_settings()
+
+class SimpleButton(tk.Button):
 
 class SimpleButton(tk.Button):
     def __init__(self, parent, text="Button", command=None, width=10, height=1, 
@@ -152,6 +192,13 @@ class RoundedFrame(tk.Frame):
         self.bg_label = None
         self.bg_image = None
         self.after(10, self.create_rounded_bg)
+        
+        self.configure(bg=self.parent_bg)
+        
+        self.bg_label = None
+        self.bg_image = None
+        
+        self.after(10, self.create_rounded_bg)
         self.bind('<Configure>', self._on_configure)
     
     def _on_configure(self, event):
@@ -176,6 +223,10 @@ class RoundedFrame(tk.Frame):
             fill=self.bg
         )
         self.bg_image = ImageTk.PhotoImage(image)
+
+        
+        self.bg_image = ImageTk.PhotoImage(image)
+
         self.bg_label = tk.Label(self, image=self.bg_image, bg=self.parent_bg, borderwidth=0, highlightthickness=0)
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.bg_label.lower()
@@ -596,6 +647,8 @@ class SimpleSettingsWindow:
             
     def _update_pet_color(self, color):
         old_color = self.pet_manager.settings.get('pet_color', 'black')
+
+        
         self.pet_manager.update_setting('pet_color', color)
         
         if hasattr(self.pet_manager, 'animation') and hasattr(self.pet_manager.animation, 'handle_color_change'):
@@ -720,6 +773,7 @@ class SimpleSettingsWindow:
         notification.after(3000, notification.destroy)
 
 class ModernSettingsWindow(SimpleSettingsWindow):
+
     def show_settings(self):
         if self.window:
             self.window.destroy()

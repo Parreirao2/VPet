@@ -16,6 +16,11 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 <img src="frames/Adult_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
 
 
+## 🖥️ Demo
+
+![Virtual Pet Demo](img_assets/VPet_Demo.gif)
+
+
 
 ## ✨ Features
 
@@ -180,11 +185,4 @@ This application is built with:
 - `frames/`: Animation frame images for different pet stages and colors
 - `img_assets/`: Food, item, and currency images
 
-## 📄 License
 
-[Your License Information Here]
-
-## 👏 Acknowledgements
-
-- Pixel art assets for the pet and items
-- Contributors and testers
