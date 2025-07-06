@@ -1077,9 +1077,9 @@ class InventorySystem:
         if item_id in ["toilet_paper", "shower"]:
             return 0
         if item_id == "evo1":
-            return 1
+            return 10000
         if item_id == "evo2":
-            return 1
+            return 1000000
             
         # Get price from food items list
         food_items = [

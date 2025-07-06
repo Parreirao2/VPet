@@ -62,6 +62,9 @@ class VirtualPet:
         # Add reference to pet_state in the stats for synchronization
         self.pet_state.stats.pet_state = self.pet_state
         
+        # Try to load existing save file on startup
+        self.auto_load_pet()
+        
         self.canvas = tk.Canvas(root, width=256, height=256,
                               highlightthickness=0, bg='#010101')
         self.canvas.pack()
@@ -137,7 +140,7 @@ class VirtualPet:
             self.update_counter = 0
         self.update_counter += 1
         
-        if self.update_counter >= 60:
+        if self.update_counter >= 12:  # Save every minute (12 * 5 seconds = 60 seconds)
             print("Auto-saving pet data...")
             self.save_pet()
             self.save_settings()
@@ -365,12 +368,11 @@ class VirtualPet:
             self.name = save_data.get('name', 'Pet')
             
             stats_dict = save_data.get('stats', {})
-            for stat in ['hunger', 'happiness', 'energy', 'health', 'cleanliness', 'social']:
-                self.pet_state.stats.modify_stat(stat, -100)
-            
+            # Set stats directly instead of using modify_stat to avoid calculation errors
             for stat in ['hunger', 'happiness', 'energy', 'health', 'cleanliness', 'social']:
                 if stat in stats_dict:
-                    self.pet_state.stats.modify_stat(stat, stats_dict[stat])
+                    self.pet_state.stats.stats[stat] = max(0, min(100, stats_dict[stat]))
+                    print(f"Loaded {stat}: {stats_dict[stat]}")
             
             if 'age' in stats_dict:
                 self.pet_state.stats.stats['age'] = stats_dict['age']
@@ -389,6 +391,11 @@ class VirtualPet:
             
             if 'currency' in save_data:
                 self.pet_state.currency = save_data['currency']
+                print(f"Loaded currency: {save_data['currency']}")
+            
+            if 'inventory' in save_data:
+                self.pet_state.inventory = save_data['inventory']
+                print(f"Loaded inventory: {len(save_data['inventory'])} items")
             
             if 'game_progress' in save_data:
                 self.pet_state.game_progress = save_data['game_progress']
@@ -594,7 +601,14 @@ class VirtualPet:
     
     def exit_app(self):
         print("Saving pet data before exit...")
-        self.save_pet()
+        try:
+            success, message = self.save_pet()
+            if success:
+                print("Pet data saved successfully!")
+            else:
+                print(f"Failed to save pet data: {message}")
+        except Exception as e:
+            print(f"Error saving pet data on exit: {e}")
         
         if hasattr(self, 'poop_system'):
             self.poop_system.cleanup()
@@ -649,6 +663,55 @@ class VirtualPet:
         except Exception as e:
             print(f"Error saving settings: {e}")
             
+    def auto_load_pet(self):
+        """Automatically load the most recent save file on startup"""
+        try:
+            # Look for the standard save file first
+            standard_save = os.path.join(self.save_path, f"{self.name.replace(' ', '_')}_save.json")
+            
+            if os.path.exists(standard_save):
+                print(f"Loading existing pet save: {standard_save}")
+                pet, error = self.load_pet(standard_save)
+                if pet:
+                    print("Pet loaded successfully!")
+                    return True
+                else:
+                    print(f"Failed to load pet: {error}")
+            
+            # If no standard save, look for any save files
+            save_files = self.get_save_files()
+            if save_files:
+                # Get the most recently modified save file
+                most_recent = None
+                most_recent_time = 0
+                
+                for save_file in save_files:
+                    if save_file.endswith('_save.json') or save_file.startswith('autosave_'):
+                        file_path = os.path.join(self.save_path, save_file)
+                        try:
+                            mod_time = os.path.getmtime(file_path)
+                            if mod_time > most_recent_time:
+                                most_recent_time = mod_time
+                                most_recent = save_file
+                        except:
+                            continue
+                
+                if most_recent:
+                    print(f"Loading most recent save: {most_recent}")
+                    pet, error = self.load_pet(most_recent)
+                    if pet:
+                        print("Pet loaded successfully!")
+                        return True
+                    else:
+                        print(f"Failed to load pet: {error}")
+            
+            print("No existing save file found, starting with new pet")
+            return False
+            
+        except Exception as e:
+            print(f"Error during auto-load: {e}")
+            return False
+
     def load_settings(self):
         import json
         import os
