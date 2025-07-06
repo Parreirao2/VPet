@@ -175,9 +175,20 @@ class VirtualPet:
     def evolve_to(self, new_stage):
         if new_stage == "Special" or self.pet_state.stage != new_stage:
             if hasattr(self.pet_state, 'growth') and hasattr(self.pet_state.growth, 'evolve_to'):
-                self.pet_state.growth.evolve_to(new_stage)
-                return True
+                success = self.pet_state.growth.evolve_to(new_stage)
+                if success:
+                    # Ensure movement resumes after evolution
+                    self.root.after(3000, self.ensure_movement_after_evolution)
+                return success
         return False
+    
+    def ensure_movement_after_evolution(self):
+        """Ensure pet starts moving again after evolution"""
+        if hasattr(self.animation, 'force_restart_movement'):
+            self.animation.force_restart_movement()
+        else:
+            self.pet_state.is_interacting = False
+            self.animation.start_random_movement()
     
     def handle_click(self, event):
         current_time = datetime.now().timestamp()
@@ -475,7 +486,10 @@ class VirtualPet:
     def resume_movement(self):
         self.pet_state.is_interacting = False
         
-        if not self.movement_timer:
+        # Use animation system's movement instead of duplicating logic
+        if hasattr(self.animation, 'resume_movement'):
+            self.animation.resume_movement()
+        elif not self.movement_timer:
             self.animation.start_random_movement()
     
     def handle_right_click(self, event):

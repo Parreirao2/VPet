@@ -36,6 +36,9 @@ class PetAnimation:
         
         self.animate()
         
+        # Start periodic movement check to prevent getting stuck
+        self.start_movement_watchdog()
+        
     def handle_stage_change(self, old_stage, new_stage):
         print(f"Pet evolved from {old_stage} to {new_stage}, playing evolution animation")
         self.play_evolution_animation()
@@ -51,7 +54,8 @@ class PetAnimation:
         self.load_animations()
         self.pet_state.is_interacting = False
         self.pet_state.current_animation = 'Standing'
-        self.resume_movement()
+        # Force restart movement after evolution
+        self.force_restart_movement()
     
     def handle_color_change(self, old_color, new_color):
         print(f"Pet color changed from {old_color} to {new_color}, reloading animations")
@@ -435,6 +439,47 @@ class PetAnimation:
         
         if not self.movement_timer:
             self.start_random_movement()
+    
+    def force_restart_movement(self):
+        """Force restart movement system - used after evolution or when pet gets stuck"""
+        print("Force restarting movement system...")
+        
+        # Cancel all existing timers
+        if self.movement_timer:
+            self.root.after_cancel(self.movement_timer)
+            self.movement_timer = None
+            
+        if self.movement_step_timer:
+            self.root.after_cancel(self.movement_step_timer)
+            self.movement_step_timer = None
+            
+        if self.resume_timer:
+            self.root.after_cancel(self.resume_timer)
+            self.resume_timer = None
+        
+        # Reset state
+        self.pet_state.is_interacting = False
+        self.pet_state.current_animation = 'Standing'
+        
+        # Start movement after a short delay
+        self.root.after(1000, self.start_random_movement)
+    
+    def start_movement_watchdog(self):
+        """Periodic check to ensure pet doesn't get stuck in idle"""
+        def check_movement():
+            # If pet has been standing still for too long and isn't interacting, restart movement
+            if (not self.pet_state.is_interacting and 
+                self.pet_state.current_animation == 'Standing' and 
+                not self.movement_timer):
+                
+                print("Pet appears stuck - restarting movement")
+                self.force_restart_movement()
+            
+            # Schedule next check
+            self.root.after(15000, check_movement)  # Check every 15 seconds
+        
+        # Start the watchdog
+        self.root.after(15000, check_movement)
     
     def schedule_resume_movement(self, delay_ms):
         if self.resume_timer:
