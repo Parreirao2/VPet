@@ -12,7 +12,6 @@ try:
 except ImportError:
     GENAI_AVAILABLE = False
 
-# Available Google AI models with their properties
 AVAILABLE_MODELS = {
     'gemini-2.5-pro': {
         'name': 'Gemini 2.5 Pro',
@@ -63,15 +62,13 @@ class AIChatSystem:
         self.pet_manager = pet_manager
         self.api_key = None
         self.model = None
-        self.selected_model = 'gemini-2.5-flash'  # Default to free model
+        self.selected_model = 'gemini-2.5-flash'
         self.chat_window = None
         self.is_typing = False
         self.typing_timer = None
         
-        # Load settings (API key and model selection)
         self.load_settings()
         
-        # Initialize the AI model if API key is available
         if self.api_key:
             self.initialize_model()
     
@@ -91,7 +88,6 @@ class AIChatSystem:
                     self.selected_model = data.get('selected_model', 'gemini-2.5-flash')
                     return True
             else:
-                # Try to load from old API key file for backward compatibility
                 old_api_key_path = os.path.join(
                     os.path.dirname(os.path.abspath(__file__)), 
                     'saves', 
@@ -101,7 +97,6 @@ class AIChatSystem:
                     with open(old_api_key_path, 'r') as f:
                         data = json.load(f)
                         self.api_key = data.get('api_key')
-                        # Migrate to new format
                         if self.api_key:
                             self.save_settings(self.api_key, self.selected_model)
                         return True
@@ -157,7 +152,6 @@ class AIChatSystem:
         """Generate a personality prompt based on the pet's current state"""
         pet_stats = self.pet_manager.get_stats_summary()
         
-        # Base personality
         personality = f"""You are {pet_stats['name']}, a virtual pet in the {pet_stats['stage']} stage of life. 
 You are {pet_stats['age']} days old. You live on your owner's computer screen and depend on them for care.
 
@@ -173,7 +167,6 @@ IMPORTANT: Only mention being hungry if hunger is below 30%. Only mention being 
 
 """
         
-        # Add personality traits based on stage
         if pet_stats['stage'] == 'Baby':
             personality += """As a baby, you are curious, innocent, and easily excited. You speak in simple words and are always eager to learn. You get scared easily but are also very trusting. You love attention and care from your owner."""
         elif pet_stats['stage'] == 'Child':
@@ -183,12 +176,10 @@ IMPORTANT: Only mention being hungry if hunger is below 30%. Only mention being 
         elif pet_stats['stage'] == 'Adult':
             personality += """As an adult, you are wise, caring, and protective of your owner. You give advice and are more emotionally stable. You appreciate deep conversations and meaningful interactions."""
         
-        # Add current mood based on stats
         status_effects = pet_stats.get('status_effects', [])
         if status_effects:
             personality += f"\n\nCurrently you are feeling: {', '.join(status_effects)}. This affects your mood and responses."
         
-        # Add comprehensive VPet capabilities information
         capabilities_info = f"""
 
 What you can do and what your owner can do for you:
@@ -286,15 +277,12 @@ Important guidelines:
         self.chat_window.geometry("450x320")
         self.chat_window.resizable(True, True)
         
-        # Make window stay on top but not always
         self.chat_window.attributes('-topmost', True)
         self.chat_window.after(100, lambda: self.chat_window.attributes('-topmost', False))
         
-        # Create main frame
         main_frame = ttk.Frame(self.chat_window)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Instructions label
         instructions = ttk.Label(main_frame, 
                                text=f"Type a message to chat with {self.pet_manager.name}!\nResponses will appear in speech bubbles above your pet.",
                                font=('Arial', 9),
