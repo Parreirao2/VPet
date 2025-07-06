@@ -279,9 +279,14 @@ class PetGrowth:
         return False
     
     def evolve_to(self, new_stage):
-        if new_stage in ['Baby', 'Child', 'Teen', 'Adult']:
+        if new_stage in ['Baby', 'Child', 'Teen', 'Adult', 'Special']:
             old_stage = self.stage
             self.stage = new_stage
+            
+            # Sync with pet_state.stage if it exists
+            if hasattr(self.stats, 'pet_state'):
+                self.stats.pet_state.stage = new_stage
+            
             for stat in ['health', 'energy']:
                 self.stats.modify_stat(stat, 20)
             

@@ -59,6 +59,8 @@ class VirtualPet:
         }
         
         self.pet_state = PetState()
+        # Add reference to pet_state in the stats for synchronization
+        self.pet_state.stats.pet_state = self.pet_state
         
         self.canvas = tk.Canvas(root, width=256, height=256,
                               highlightthickness=0, bg='#010101')
@@ -84,9 +86,6 @@ class VirtualPet:
         
         self.pet_state.pet_manager = self
         
-        self.load_animations()
-        
-        
         self.last_click_time = 0
         self.last_happiness_boost_time = 0
         self.happiness_boost_cooldown = 0
@@ -99,7 +98,6 @@ class VirtualPet:
         self.canvas.bind('<Button-3>', self.handle_right_click)
         self.canvas.bind('<B1-Motion>', self.handle_drag)
         
-        self.animate()
         self.update_state()
         
         self.animation.start_random_movement()
@@ -114,84 +112,9 @@ class VirtualPet:
         if hasattr(self.animation, 'handle_color_change'):
             self.animation.handle_color_change(None, self.settings['pet_color'])
     
-    def load_animations(self):
-        self.animations = {}
-        base_path = os.path.join(os.path.dirname(__file__), 'frames')
-        
-        for state in ['Walk1', 'Walk2', 'Happy', 'Sleep1', 'Sleep2',
-                     'Eat1', 'Eat2', 'Attack', 'Angry', 'Lose1']:
-            try:
-                img_path = os.path.join(base_path, f'{self.pet_state.stage}_{state}.png')
-                if os.path.exists(img_path):
-                    image = Image.open(img_path)
-                    self.animations[state] = ImageTk.PhotoImage(image)
-            except Exception as e:
-                print(f'Error loading animation frame: {e}')
     
-    def animate(self):
-        try:
-            animation_sequences = {
-                'Standing': ['Walk1', 'Walk2'],
-                'Walking': ['Walk1', 'Walk2'],
-                'happy': ['Happy', 'Walk1'],
-                'sleeping': ['Sleep1', 'Sleep2'],
-                'eating': ['Eat1', 'Eat2'],
-                'playing': ['Attack', 'Walk1'],
-                'special': ['Happy', 'Walk1', 'Walk2', 'Happy'],
-                'angry': ['Angry', 'Walk1'],
-                'sad': ['Lose1', 'Walk1'],
-                'sick': ['Lose1', 'Sleep2']
-            }
-            
-            sequence = animation_sequences[self.pet_state.current_animation]
-            frame = sequence[int(datetime.now().timestamp() * 2) % len(sequence)]
-            
-            self.canvas.delete('pet')
-            if frame in self.animations:
-                pet_color = self.settings.get('pet_color', 'black').lower()
-                
-                img_path = None
-                base_path = os.path.join(os.path.dirname(__file__), 'frames')
-                
-                if pet_color == 'black':
-                    img_path = os.path.join(base_path, f'{self.pet_state.stage}_{frame}.png')
-                    if not os.path.exists(img_path):
-                        img_path = os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}.png')
-                else:
-                    possible_paths = [
-                        os.path.join(base_path, f'{self.pet_state.stage}_{frame}_{pet_color}.png'),
-                        os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}_{pet_color}.png')
-                    ]
-                    
-                    for path in possible_paths:
-                        if os.path.exists(path):
-                            img_path = path
-                            break
-                
-                if img_path is None or not os.path.exists(img_path):
-                    fallback_paths = [
-                        os.path.join(base_path, f'{self.pet_state.stage}_{frame}.png'),
-                        os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}.png')
-                    ]
-                    
-                    for path in fallback_paths:
-                        if os.path.exists(path):
-                            img_path = path
-                            break
-                
-                if img_path and os.path.exists(img_path):
-                    image = Image.open(img_path)
-                    size_factor = 4 * (self.settings['pet_size'] / 100)
-                    resized_image = image.resize((int(image.width * size_factor), int(image.height * size_factor)), Image.LANCZOS)
-                    if self.pet_state.direction == 'right':
-                        resized_image = resized_image.transpose(Image.FLIP_LEFT_RIGHT)
-                    self.animations[frame] = ImageTk.PhotoImage(resized_image)
-                    self.canvas.create_image(128, 128, image=self.animations[frame], tags='pet')
-        
-        except Exception as e:
-            print(f'Animation error: {e}')
-        
-        self.root.after(100, self.animate)
+    
+    
     
     def update_state(self):
         self.pet_state.stats.update()
@@ -199,7 +122,10 @@ class VirtualPet:
         self.check_sickness_status()
         
         if hasattr(self.pet_state, 'growth'):
-            self.pet_state.growth.check_evolution()
+            evolution_occurred = self.pet_state.growth.check_evolution()
+            # Sync stages after evolution check
+            if evolution_occurred:
+                self.pet_state.stage = self.pet_state.growth.stage
         
         if hasattr(self, 'icon'):
             if hasattr(self.icon, 'update_icon_menu'):
@@ -244,10 +170,11 @@ class VirtualPet:
             self.evolve_to('Adult')
     
     def evolve_to(self, new_stage):
-        self.pet_state.stage = new_stage
-        self.load_animations()
-        self.pet_state.current_animation = 'special'
-        return True
+        if new_stage == "Special" or self.pet_state.stage != new_stage:
+            if hasattr(self.pet_state, 'growth') and hasattr(self.pet_state.growth, 'evolve_to'):
+                self.pet_state.growth.evolve_to(new_stage)
+                return True
+        return False
     
     def handle_click(self, event):
         current_time = datetime.now().timestamp()
@@ -286,7 +213,6 @@ class VirtualPet:
         
         self.pet_state.current_animation = 'Standing'
         self.pet_state.direction = 'left'
-        self.load_animations()
         
         self.pet_state.pet_manager = self
         
@@ -457,14 +383,15 @@ class VirtualPet:
             
             if 'stage' in save_data:
                 self.pet_state.stage = save_data['stage']
+                # Sync the growth stage as well
+                if hasattr(self.pet_state, 'growth'):
+                    self.pet_state.growth.stage = save_data['stage']
             
             if 'currency' in save_data:
                 self.pet_state.currency = save_data['currency']
             
             if 'game_progress' in save_data:
                 self.pet_state.game_progress = save_data['game_progress']
-            
-            self.load_animations()
             
             self.pet_state.current_animation = 'special'
             

@@ -18,14 +18,14 @@ class PoopSystem:
         self.load_images()
         
         if hasattr(pet_state, 'pet_manager') and hasattr(pet_state.pet_manager, 'settings'):
-            self.poop_chance = pet_state.pet_manager.settings.get('poop_frequency', 0.1)
+            self.poop_chance = pet_state.pet_manager.settings.get('poop_frequency', 0.3)
         else:
-            self.poop_chance = 0.1
+            self.poop_chance = 0.3
         self.last_poop_time = datetime.now()
-        self.min_poop_interval = random.randint(300, 900)
+        self.min_poop_interval = random.randint(180, 600)
         
         self.food_consumed = 0
-        self.food_poop_multiplier = 0.05
+        self.food_poop_multiplier = 0.15
         
         self.cleaning_mode = False
         self.original_cursor = None

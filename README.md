@@ -15,6 +15,9 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 (Adult)
 <img src="frames/Adult_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
 
+(Special)
+<img src="frames/Special_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+
 
 ## 🖥️ Demo
 
@@ -26,6 +29,7 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 
 ### 🌱 Pet Life Cycle
 - **Growth Stages**: Your pet evolves through 4 distinct life stages - Baby, Child, Teen, and Adult
+- **Special Evolution**: A secret "Special" stage can be unlocked with a special item.
 - **Aging System**: Pet ages over time and evolves when reaching certain age thresholds
 - **Customizable**: Choose from different pet colors (black, blue, pink)
 
@@ -40,6 +44,7 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 ### 🎮 Interactive Gameplay
 - **Feeding System**: Various food items with different stat effects
 - **Poop System**: Clean up after your pet to maintain cleanliness
+- **Evolution Items**: Use special items to evolve your pet to the next stage or a secret stage.
 - **Double-Click Interaction**: Double-click your pet for happiness boosts
 - **Drag & Drop**: Move your pet around your screen
 - **Animation System**: Different animations for various pet states and activities
@@ -51,7 +56,7 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
   - *Number Guesser*: Test your luck by guessing numbers with increasing difficulty levels
   - *Reaction Test*: Test your reflexes and earn rewards based on your reaction time
 - **Progressive Difficulty**: Games become more challenging as you level up, with bigger rewards
-- **Shop**: Spend your hard-earned coins on special items and treats for your pet
+- **Shop**: Spend your hard-earned coins on special items and treats for your pet, including evolution items.
 - **Economy System**: Balance your spending between necessities and luxury items
 
 ### 💻 Desktop Integration
@@ -116,12 +121,9 @@ The Game Hub provides entertainment for both you and your pet while earning valu
 - Earn coins by:
   - Playing mini-games successfully
   - Taking good care of your pet
-  - Completing special achievements
 - Spend coins on:
-  - Premium food items with better stat effects
-  - Special toys and accessories
-  - Unique pet customizations
-  - Stat boosters and special items
+  - Food items with better stat effects
+
 
 ### 🧹 Cleaning
 
@@ -144,6 +146,11 @@ Your pet will evolve as it ages:
 - Baby → Child: 30 days
 - Child → Teen: 60 days
 - Teen → Adult: 90 days
+
+### ✨ Special Evolution
+
+- **Evo1 Item**: Evolves your pet to the next stage (e.g., Baby to Child). This item cannot be used if the pet is already at the final stage (Adult).
+- **Evo2 Item**: Evolves your pet to a secret "Special" stage with unique animations.
 
 ## 🎨 Customization
 
@@ -184,5 +191,3 @@ This application is built with:
 - `system_tray.py`: System tray integration and menu controls
 - `frames/`: Animation frame images for different pet stages and colors
 - `img_assets/`: Food, item, and currency images
-
-

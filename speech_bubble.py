@@ -262,8 +262,14 @@ class SpeechBubble:
         
         self._create_bubble(message)
     
-    def _create_bubble(self, message):
-        self.clear_bubble()
+    def _create_bubble(self, message, is_typewriter=False, is_complete=False):
+        # Only clear bubble if this is not a typewriter update
+        if not is_typewriter:
+            self.clear_bubble()
+        elif self.bubble_window:
+            # For typewriter effect, just update the existing bubble
+            self._update_bubble_text(message, is_complete)
+            return
         
         pet_x = self.parent.winfo_x() + self.canvas.winfo_width() // 2
         pet_y = self.parent.winfo_y() + 100
@@ -277,15 +283,19 @@ class SpeechBubble:
         
         padding = 12
         
-        temp_label = tk.Label(self.bubble_window, text=message, font=("Comic Sans MS", 11, "bold"), wraplength=180)
+        # Calculate dynamic size based on message length
+        temp_label = tk.Label(self.bubble_window, text=message, font=("Comic Sans MS", 11, "bold"), wraplength=250)
         temp_label.update_idletasks()
         
         text_width = temp_label.winfo_reqwidth()
         text_height = temp_label.winfo_reqheight()
         temp_label.destroy()
         
-        bubble_width = min(text_width + padding * 2, 200)
-        bubble_height = text_height + padding * 2
+        # Dynamic sizing - grow with content but have reasonable limits
+        min_width = 120
+        max_width = 300
+        bubble_width = max(min_width, min(text_width + padding * 2, max_width))
+        bubble_height = max(40, text_height + padding * 2)
         
         canvas_width = bubble_width + 40
         canvas_height = bubble_height + 40
@@ -351,7 +361,14 @@ class SpeechBubble:
             width=0
         )
         
-        bubble_canvas.create_text(
+        # This will be replaced by the stored text reference below
+        
+        self._update_bubble_position(canvas_width, canvas_height)
+        
+        self._start_position_updates(canvas_width, canvas_height)
+        
+        # Store text widget reference for typewriter updates
+        self.bubble_text_id = bubble_canvas.create_text(
             (bubble_width + 30) // 2,
             (bubble_height + 30) // 2,
             text=message,
@@ -362,12 +379,16 @@ class SpeechBubble:
             anchor="center"
         )
         
-        self._update_bubble_position(canvas_width, canvas_height)
+        # Store canvas reference for updates
+        self.bubble_canvas = bubble_canvas
         
-        self._start_position_updates(canvas_width, canvas_height)
-        
-        display_time = max(self.bubble_duration, len(message) * 100)
-        self._bubble_timer = self.parent.after(display_time, self.clear_bubble)
+        # Set display duration - longer for typewriter effect or longer messages
+        if is_typewriter and not is_complete:
+            # Don't auto-clear during typewriter effect
+            pass
+        else:
+            display_time = max(self.bubble_duration, len(message) * 100)
+            self._bubble_timer = self.parent.after(display_time, self.clear_bubble)
     
     def _update_bubble_position(self, canvas_width, canvas_height):
         if not self.bubble_window:
@@ -398,6 +419,33 @@ class SpeechBubble:
                 self._update_position_timer = self.parent.after(50, update_loop)
         
         self._update_position_timer = self.parent.after(50, update_loop)
+    
+    def _update_bubble_text(self, new_text, is_complete=False):
+        """Update the text in an existing bubble (for typewriter effect)"""
+        if not self.bubble_window or not hasattr(self, 'bubble_canvas') or not hasattr(self, 'bubble_text_id'):
+            return
+        
+        try:
+            # Update the text
+            self.bubble_canvas.itemconfig(self.bubble_text_id, text=new_text)
+            
+            # If typing is complete, set a timer to clear the bubble
+            if is_complete:
+                display_time = max(self.bubble_duration, len(new_text) * 100)
+                self._bubble_timer = self.parent.after(display_time, self.clear_bubble)
+        except tk.TclError:
+            # Bubble was destroyed, ignore
+            pass
+    
+    def show_typewriter_bubble(self, text, is_complete=False):
+        """Show a speech bubble with typewriter effect (for AI chat)"""
+        self._create_bubble(text, is_typewriter=True, is_complete=is_complete)
+    
+    def show_dynamic_typewriter_bubble(self, text, is_complete=False):
+        """Show a speech bubble that dynamically resizes as text appears"""
+        # Clear existing bubble and create new one with current text
+        self.clear_bubble()
+        self._create_bubble(text, is_typewriter=False, is_complete=is_complete)
     
     def clear_bubble(self):
         if self._bubble_timer:

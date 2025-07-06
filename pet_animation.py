@@ -37,9 +37,21 @@ class PetAnimation:
         self.animate()
         
     def handle_stage_change(self, old_stage, new_stage):
-        print(f"Pet evolved from {old_stage} to {new_stage}, reloading animations")
+        print(f"Pet evolved from {old_stage} to {new_stage}, playing evolution animation")
+        self.play_evolution_animation()
+        
+    def play_evolution_animation(self):
+        self.pet_state.is_interacting = True
+        self.pet_state.current_animation = 'Evolving'
+        self.root.after(2400, self.load_new_stage_animations) # 8 frames * 100ms * 3 cycles
+
+    def load_new_stage_animations(self):
+        print("Evolution animation finished, reloading animations for new stage")
         self.animations = {}
         self.load_animations()
+        self.pet_state.is_interacting = False
+        self.pet_state.current_animation = 'Standing'
+        self.resume_movement()
     
     def handle_color_change(self, old_color, new_color):
         print(f"Pet color changed from {old_color} to {new_color}, reloading animations")
@@ -59,6 +71,20 @@ class PetAnimation:
         
         all_states = ['Walk1', 'Walk2', 'Happy', 'Sleep1', 'Sleep2',
                      'Eat1', 'Eat2', 'Attack', 'Angry', 'Lose1', 'Refuse']
+        
+        base_path_evo = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frames', 'Evolution')
+        evolution_frames = []
+        for i in range(1, 9):
+            try:
+                img_path = os.path.join(base_path_evo, f'Evo{i}.png')
+                if os.path.exists(img_path):
+                    image = Image.open(img_path)
+                    size_factor = 4 * (self.settings['pet_size'] / 100)
+                    resized_image = image.resize((int(image.width * size_factor), int(image.height * size_factor)), Image.LANCZOS)
+                    evolution_frames.append(ImageTk.PhotoImage(resized_image))
+            except Exception as e:
+                print(f'Error loading evolution frame {i}: {e}')
+        self.animations['Evolving'] = evolution_frames
         
         fallback_map = {
             'Sleep2': 'Sleep1',
@@ -253,60 +279,71 @@ class PetAnimation:
                 'sick': ['Walk1', 'Lose1']
             }
             
-            sequence = animation_sequences[self.pet_state.current_animation]
-            frame = sequence[int(datetime.now().timestamp() * 2) % len(sequence)]
-            
-            self.canvas.delete('pet')
-            if frame in self.animations:
-                base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frames')
-                pet_color = self.settings.get('pet_color', 'black').lower()
-                
-                img_path = None
-                if pet_color == 'black':
-                    possible_paths = [
-                        os.path.join(base_path, f'{self.pet_state.stage}_{frame}.png'),
-                        os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}.png')
-                    ]
-                else:
-                    possible_paths = [
-                        os.path.join(base_path, f'{self.pet_state.stage}_{frame}_{pet_color}.png'),
-                        os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}_{pet_color}.png')
-                    ]
-                
-                for path in possible_paths:
-                    if os.path.exists(path):
-                        img_path = path
-                        break
-                
-                if img_path is None or not os.path.exists(img_path):
-                    fallback_paths = [
-                        os.path.join(base_path, f'{self.pet_state.stage}_{frame}.png'),
-                        os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}.png')
-                    ]
+            if self.pet_state.current_animation == 'Evolving':
+                sequence = self.animations.get('Evolving', [])
+                if not sequence:
+                    self.root.after(100, self.animate)
+                    return
+                frame = sequence[int(datetime.now().timestamp() * 4) % len(sequence)]
+                self.canvas.delete('pet')
+                self.canvas.create_image(128, 128, image=frame, tags='pet')
+            else:
+                sequence = animation_sequences.get(self.pet_state.current_animation, [])
+                if not sequence:
+                    self.root.after(100, self.animate)
+                    return
+                frame = sequence[int(datetime.now().timestamp() * 2) % len(sequence)]
+                self.canvas.delete('pet')
+                if frame in self.animations:
+                    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frames')
+                    pet_color = self.settings.get('pet_color', 'black').lower()
                     
-                    for path in fallback_paths:
+                    img_path = None
+                    if pet_color == 'black':
+                        possible_paths = [
+                            os.path.join(base_path, f'{self.pet_state.stage}_{frame}.png'),
+                            os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}.png')
+                        ]
+                    else:
+                        possible_paths = [
+                            os.path.join(base_path, f'{self.pet_state.stage}_{frame}_{pet_color}.png'),
+                            os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}_{pet_color}.png')
+                        ]
+                    
+                    for path in possible_paths:
                         if os.path.exists(path):
                             img_path = path
                             break
-                
-                if img_path and os.path.exists(img_path):
-                    image = Image.open(img_path)
-                    size_factor = 4 * (self.settings['pet_size'] / 100)
-                    resized_image = image.resize((int(image.width * size_factor), int(image.height * size_factor)), Image.LANCZOS)
                     
-                    if self.pet_state.direction == 'right':
-                        resized_image = resized_image.transpose(Image.FLIP_LEFT_RIGHT)
+                    if img_path is None or not os.path.exists(img_path):
+                        fallback_paths = [
+                            os.path.join(base_path, f'{self.pet_state.stage}_{frame}.png'),
+                            os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}.png')
+                        ]
+                        
+                        for path in fallback_paths:
+                            if os.path.exists(path):
+                                img_path = path
+                                break
                     
-                    self.animations[frame] = ImageTk.PhotoImage(resized_image)
-                    self.canvas.create_image(128, 128, image=self.animations[frame], tags='pet')
+                    if img_path and os.path.exists(img_path):
+                        image = Image.open(img_path)
+                        size_factor = 4 * (self.settings['pet_size'] / 100)
+                        resized_image = image.resize((int(image.width * size_factor), int(image.height * size_factor)), Image.LANCZOS)
+                        
+                        if self.pet_state.direction == 'right':
+                            resized_image = resized_image.transpose(Image.FLIP_LEFT_RIGHT)
+                        
+                        self.animations[frame] = ImageTk.PhotoImage(resized_image)
+                        self.canvas.create_image(128, 128, image=self.animations[frame], tags='pet')
+                    else:
+                        photoimage = self.animations[frame]
+                        self.canvas.create_image(128, 128, image=photoimage, tags='pet')
+                        print(f"Warning: Could not reload animation frame for {self.pet_state.stage}_{frame}")
+                    
+                    self.check_sickness_status()
                 else:
-                    photoimage = self.animations[frame]
-                    self.canvas.create_image(128, 128, image=photoimage, tags='pet')
-                    print(f"Warning: Could not reload animation frame for {self.pet_state.stage}_{frame}")
-                
-                self.check_sickness_status()
-            else:
-                print(f"Warning: Animation frame {frame} not found in preloaded animations")
+                    print(f"Warning: Animation frame {frame} not found in preloaded animations")
         
         except Exception as e:
             print(f'Animation error: {e}')

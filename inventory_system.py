@@ -6,12 +6,13 @@ from unified_ui import COLORS
 
 class InventoryItem:
     
-    def __init__(self, name, image_path, description, quantity=1, max_quantity=99):
+    def __init__(self, name, image_path, description, quantity=1, max_quantity=99, unlimited=False):
         self.name = name
         self.image_path = image_path
         self.description = description
         self.quantity = quantity
         self.max_quantity = max_quantity
+        self.unlimited = unlimited
         self.image = None
         self.icon = None
         self.selected = False
@@ -86,7 +87,8 @@ class InventorySystem:
                     name="Toilet Paper",
                     image_path=toilet_paper_path,
                     description="Used to clean up messes",
-                    quantity=5
+                    quantity=1,
+                    unlimited=True
                 )
                 toilet_paper.load_image()
                 self.items["toilet_paper"] = toilet_paper
@@ -97,10 +99,35 @@ class InventorySystem:
                     name="Shower",
                     image_path=shower_path,
                     description="Increases cleanliness by 15%",
-                    quantity=5
+                    quantity=1,
+                    unlimited=True
                 )
                 shower.load_image()
                 self.items["shower"] = shower
+
+            evo1_path = os.path.join(img_path, 'Evo1.png')
+            if os.path.exists(evo1_path):
+                evo1 = InventoryItem(
+                    name="Evo1",
+                    image_path=evo1_path,
+                    description="Evolves your pet to the next stage.",
+                    quantity=0,
+                    max_quantity=1
+                )
+                evo1.load_image()
+                self.items["evo1"] = evo1
+
+            evo2_path = os.path.join(img_path, 'Evo2.png')
+            if os.path.exists(evo2_path):
+                evo2 = InventoryItem(
+                    name="Evo2",
+                    image_path=evo2_path,
+                    description="Evolves your pet to a special stage.",
+                    quantity=0,
+                    max_quantity=1
+                )
+                evo2.load_image()
+                self.items["evo2"] = evo2
 
             food_items = [
                 ("baguette", "Baguette", "Hunger: +4, Happiness: +2, Energy: +3, Health: +1, Cleanliness: -1", 35),
@@ -218,26 +245,80 @@ class InventorySystem:
         currency_label.pack(side=tk.LEFT)
         self.pet_state.currency_label = currency_label
         
-        canvas = tk.Canvas(main_frame, bg=COLORS['background'], width=420)
-        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        # Create scrollable frame for inventory items
+        scrollable_frame = tk.Frame(main_frame, bg=COLORS['background'])
+        scrollable_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
+        # Create canvas with fixed height to ensure scrolling
+        canvas = tk.Canvas(scrollable_frame, bg=COLORS['background'], width=380, height=300, highlightthickness=0)
+        
+        # Create scrollbar - always visible with explicit styling
+        scrollbar = tk.Scrollbar(scrollable_frame, orient="vertical", command=canvas.yview, width=20, bg=COLORS['background'])
+        
+        # Create the frame that will hold all inventory items
         grid_frame = tk.Frame(canvas, bg=COLORS['background'])
-        grid_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         
-        canvas.create_window((0, 0), window=grid_frame, anchor="nw")
+        # Configure scrolling behavior
+        def configure_scroll_region(event=None):
+            # Update scroll region to encompass all items
+            canvas.update_idletasks()
+            bbox = canvas.bbox("all")
+            
+            if bbox:
+                # Always ensure there's enough content to scroll
+                canvas_height = canvas.winfo_height()
+                content_height = bbox[3] - bbox[1]
+                
+                # If content is smaller than canvas, create minimum scroll region
+                min_scroll_height = max(content_height, canvas_height + 50)
+                canvas.configure(scrollregion=(0, 0, 0, min_scroll_height))
+            else:
+                # No items yet, set a default scroll region to show scrollbar
+                canvas.configure(scrollregion=(0, 0, 0, 400))
+        
+        def configure_canvas_width(event):
+            # Make the grid frame match the canvas width
+            canvas_width = event.width - scrollbar.winfo_width()
+            canvas.itemconfig(canvas_window, width=canvas_width)
+        
+        # Bind events for dynamic resizing
+        grid_frame.bind("<Configure>", configure_scroll_region)
+        canvas.bind("<Configure>", configure_canvas_width)
+        
+        # Create window in canvas for the grid frame
+        canvas_window = canvas.create_window((0, 0), window=grid_frame, anchor="nw")
+        
+        # Link canvas and scrollbar
         canvas.configure(yscrollcommand=scrollbar.set)
         
+        # Grid configuration - 4 columns
         for i in range(4):
             grid_frame.grid_columnconfigure(i, weight=1)
         
-        canvas.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
+        # Store references for later use
+        self.inventory_canvas = canvas
+        self.inventory_scrollbar = scrollbar
+        self.inventory_grid_frame = grid_frame
+        
+        # Mouse wheel scrolling function
         def _on_mousewheel(event):
             if canvas.winfo_exists():
                 canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
+        # Bind mouse wheel to canvas and main frame
         canvas.bind("<MouseWheel>", _on_mousewheel)
+        main_frame.bind("<MouseWheel>", _on_mousewheel)
+        scrollable_frame.bind("<MouseWheel>", _on_mousewheel)
+        
+        # Also bind to the inventory window for better mouse wheel support
+        self.inventory_window.bind("<MouseWheel>", _on_mousewheel)
+        
+        # Force initial scroll region update
+        self.inventory_window.after(100, configure_scroll_region)
         
         def _on_closing():
             if canvas.winfo_exists():
@@ -249,8 +330,10 @@ class InventorySystem:
         self.item_buttons = []
         row, col = 0, 0
         max_cols = 4
-        
-        for item_id, item in self.items.items():
+
+        sorted_items = sorted(self.items.items(), key=lambda item: self.get_item_price(item[0]))
+
+        for item_id, item in sorted_items:
             item_frame = tk.Frame(grid_frame, bg=COLORS['surface'],
                                 highlightbackground=COLORS['primary_light'],
                                 highlightthickness=1 if item.selected else 0,
@@ -266,9 +349,11 @@ class InventorySystem:
                                 bg=COLORS['surface'], fg=COLORS['text'])
             name_label.pack(pady=(2, 0))
             
-            qty_label = tk.Label(item_frame, text=f"x{item.quantity}", font=("Arial", 8),
-                              bg=COLORS['surface'], fg=COLORS['text_light'])
-            qty_label.pack(pady=(0, 2))
+            qty_label = None
+            if not item.unlimited:
+                qty_label = tk.Label(item_frame, text=f"x{item.quantity}", font=("Arial", 8),
+                                  bg=COLORS['surface'], fg=COLORS['text_light'])
+                qty_label.pack(pady=(0, 2))
             
             price = self.get_item_price(item_id)
             price_label = tk.Label(item_frame, text=f"{price} coins", 
@@ -326,9 +411,12 @@ class InventorySystem:
                 col = 0
                 row += 1
         
-        close_button = tk.Button(main_frame, text="Close", bg=COLORS['primary'],
-                              fg="white", font=("Arial", 10), bd=0,
-                              command=self.inventory_window.destroy)
+        # Import SimpleButton for prettier close button
+        from unified_ui import SimpleButton
+        
+        close_button = SimpleButton(main_frame, text="Close", 
+                                   bg=COLORS['primary'], fg="white",
+                                   command=self.inventory_window.destroy)
         close_button.pack(pady=(10, 0))
         
         self.inventory_window.attributes('-topmost', True)
@@ -359,7 +447,7 @@ class InventorySystem:
             self.selected_item = None
     
     def use_item(self, item_id):
-        if item_id in self.items and self.items[item_id].quantity > 0:
+        if item_id in self.items and (self.items[item_id].quantity > 0 or item_id in ['toilet_paper', 'shower']):
             item = self.items[item_id]
             initial_stats = {}
             for stat in ['hunger', 'happiness', 'energy', 'health', 'cleanliness', 'social']:
@@ -384,12 +472,23 @@ class InventorySystem:
                 feedback.place(relx=0.5, rely=0.1, anchor="center")
                 self.inventory_window.after(2000, feedback.destroy)
             
-            item.quantity -= 1
+            if not item.unlimited:
+                item.quantity -= 1
             self.update_ui()
             return True
         return False
 
     def buy_item(self, item_id):
+        if item_id == "evo1" and self.pet_state.stage == "Adult":
+            if self.inventory_window and self.inventory_window.winfo_exists():
+                message = tk.Label(self.inventory_window, text="Pet is already at max stage!", 
+                                  bg=COLORS['warning'], fg="white",
+                                  font=("Arial", 10, "bold"),
+                                  padx=10, pady=5)
+                message.place(relx=0.5, rely=0.1, anchor="center")
+                self.inventory_window.after(2000, message.destroy)
+            return False
+
         price = self.get_item_price(item_id)
         
         if self.pet_state.currency >= price:
@@ -431,7 +530,7 @@ class InventorySystem:
     def update_ui(self):
         for button in self.item_buttons:
             item_id = button["id"]
-            if item_id in self.items:
+            if item_id in self.items and button["qty_label"]:
                 button["qty_label"].config(text=f"x{self.items[item_id].quantity}")
         
         self.update_currency_display()
@@ -500,8 +599,26 @@ class InventorySystem:
                 
             return True
         
-        if is_food_item and hasattr(self.pet_state, 'poop_system'):
-            self.pet_state.poop_system.add_food_consumed(1)
+        elif item.name == "Evo1":
+            if self.pet_state.stage != "Adult":
+                if self.pet_state.stage == "Baby":
+                    self.pet_state.growth.evolve_to("Child")
+                elif self.pet_state.stage == "Child":
+                    self.pet_state.growth.evolve_to("Teen")
+                elif self.pet_state.stage == "Teen":
+                    self.pet_state.growth.evolve_to("Adult")
+            else:
+                if self.inventory_window and self.inventory_window.winfo_exists():
+                    message = tk.Label(self.inventory_window, text="Pet is already at max stage!", 
+                                      bg=COLORS['warning'], fg="white",
+                                      font=("Arial", 10, "bold"),
+                                      padx=10, pady=5)
+                    message.place(relx=0.5, rely=0.1, anchor="center")
+                    self.inventory_window.after(2000, message.destroy)
+                item.quantity += 1
+                return False
+        elif item.name == "Evo2":
+            self.pet_state.growth.evolve_to("Special")
         
         if hasattr(self.pet_state, 'update_stats_display'):
             self.pet_state.update_stats_display()
@@ -959,6 +1076,10 @@ class InventorySystem:
         # Special case for free items
         if item_id in ["toilet_paper", "shower"]:
             return 0
+        if item_id == "evo1":
+            return 1
+        if item_id == "evo2":
+            return 1
             
         # Get price from food items list
         food_items = [
