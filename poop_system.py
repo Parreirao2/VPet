@@ -17,15 +17,22 @@ class PoopSystem:
         self.toilet_paper_image = None
         self.load_images()
         
-        if hasattr(pet_state, 'pet_manager') and hasattr(pet_state.pet_manager, 'settings'):
-            self.poop_chance = pet_state.pet_manager.settings.get('poop_frequency', 0.3)
-        else:
-            self.poop_chance = 0.3
-        self.last_poop_time = datetime.now()
-        self.min_poop_interval = random.randint(180, 600)
+        self.base_poop_chance = 0.05
+        self.current_poop_chance = self.base_poop_chance
+        self.max_poop_chance = 0.4
+        
+        self.poop_pressure = 0.0
+        self.max_poop_pressure = 100.0
+        
+        self.pressure_increase_rate = self.pet_state.pet_manager.settings.get('poop_frequency', 0.5)
+        self.last_pressure_update = datetime.now()
         
         self.food_consumed = 0
-        self.food_poop_multiplier = 0.15
+        self.food_pressure_multiplier = 8.0
+        
+        self.last_poop_time = datetime.now()
+        self.min_poop_interval = 300
+        self.post_poop_pressure_reduction = 60.0
         
         self.cleaning_mode = False
         self.original_cursor = None
@@ -35,13 +42,17 @@ class PoopSystem:
         self.poop_animation_timer = None
         self.start_poop_animation()
         
-    def add_food_consumed(self, amount=1):
-        self.food_consumed += amount
-        print(f"Food consumed increased to {self.food_consumed}")
-        
         self.start_poop_check_timer()
         
-        print(f"Poop system initialized with chance: {self.poop_chance}%, interval: {self.min_poop_interval}s")
+    def add_food_consumed(self, amount=1):
+        self.food_consumed += amount
+        
+        pressure_increase = amount * self.food_pressure_multiplier
+        self.poop_pressure = min(self.max_poop_pressure, self.poop_pressure + pressure_increase)
+        
+        self.update_poop_chance()
+        
+        self.start_poop_check_timer()
     
     def load_images(self):
         try:
@@ -76,38 +87,47 @@ class PoopSystem:
         except Exception as e:
             print(f'Error loading poop images: {e}')
     
+    def update_poop_pressure(self):
+        now = datetime.now()
+        elapsed_minutes = (now - self.last_pressure_update).total_seconds() / 60.0
+        self.last_pressure_update = now
+        
+        pressure_increase = elapsed_minutes * self.pressure_increase_rate
+        self.poop_pressure = min(self.max_poop_pressure, self.poop_pressure + pressure_increase)
+        
+        self.update_poop_chance()
+    
+    def update_poop_chance(self):
+        pressure_ratio = self.poop_pressure / self.max_poop_pressure
+        self.current_poop_chance = self.base_poop_chance + (pressure_ratio * (self.max_poop_chance - self.base_poop_chance))
+    
     def check_poop_generation(self, x, y):
         if self.pet_state.is_interacting or self.cleaning_mode:
             return
         
         now = datetime.now()
+        
         if (now - self.last_poop_time).total_seconds() < self.min_poop_interval:
             return
         
+        self.update_poop_pressure()
+        
         cleanliness = self.pet_state.stats.get_stat('cleanliness') if hasattr(self.pet_state, 'stats') else 100
+        cleanliness_factor = 1 + ((100 - cleanliness) / 200)
         
-        adjusted_chance = self.poop_chance * (1 + (100 - cleanliness) / 100)
-        
-        if self.food_consumed > 0:
-            food_effect = self.food_consumed * self.food_poop_multiplier
-            adjusted_chance += food_effect
-            print(f"Food effect on poop chance: +{food_effect:.2f}% from {self.food_consumed} food items")
-        
-        print(f"Poop check: chance={adjusted_chance:.2f}%, random={random.random() * 100:.2f}%, interval={self.min_poop_interval}s")
+        final_chance = self.current_poop_chance * cleanliness_factor
         
         random_value = random.random()
-        if random_value <= (adjusted_chance):
-            print(f"GENERATING POOP! Random value: {random_value} <= {adjusted_chance}")
+        if random_value <= final_chance:
             screen_x = self.root.winfo_x() + 128
             screen_y = self.root.winfo_y() + 128
             self.generate_poop(screen_x, screen_y)
+            
             self.last_poop_time = now
+            self.poop_pressure = max(0, self.poop_pressure - self.post_poop_pressure_reduction)
+            self.food_consumed = max(0, self.food_consumed - 1)
             
-            self.min_poop_interval = max(10, 300 - (self.poop_chance * 1000))
-            
-            if self.food_consumed > 0:
-                self.food_consumed = 0
-                print(f"Food consumed reset to {self.food_consumed} after generating poop")
+            self.update_poop_chance()
     
     def generate_poop(self, screen_x, screen_y):
         poop_img = self.poop_images[0]
@@ -127,7 +147,7 @@ class PoopSystem:
         poop_window.attributes('-transparentcolor', transparent_color)
         
         poop_canvas = tk.Canvas(poop_window, width=32, height=32, 
-                              highlightthickness=0, bg=transparent_color)
+                               highlightthickness=0, bg=transparent_color)
         poop_canvas.pack()
         
         poop_id = poop_canvas.create_image(16, 16, image=poop_img)
@@ -146,8 +166,8 @@ class PoopSystem:
         })
         
         if hasattr(self.pet_state, 'stats'):
-            self.pet_state.stats.modify_stat('cleanliness', -5)
-            print(f"Poop generated! Cleanliness reduced to {self.pet_state.stats.get_stat('cleanliness')}")
+            self.pet_state.stats.modify_stat('cleanliness', -9)
+            self.pet_state.poop_system_dirty = True # Mark that there's poop on screen
 
     
     def start_cleaning_mode(self):
@@ -233,7 +253,7 @@ class PoopSystem:
     
     def start_poop_check_timer(self):
         self.check_old_poops()
-        self.poop_check_timer = self.root.after(30000, self.start_poop_check_timer)
+        self.poop_check_timer = self.root.after(15000, self.start_poop_check_timer)
     
     def check_old_poops(self):
         now = datetime.now()
@@ -302,3 +322,12 @@ class PoopSystem:
             removed_poop = self.poops.pop(index)
             return True
         return False
+    
+    def get_poop_status(self):
+        return {
+            'poop_pressure': round(self.poop_pressure, 1),
+            'current_poop_chance': round(self.current_poop_chance, 3),
+            'food_consumed': self.food_consumed,
+            'active_poops': len(self.poops),
+            'time_since_last_poop': round((datetime.now() - self.last_poop_time).total_seconds(), 1)
+        }

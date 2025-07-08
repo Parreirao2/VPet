@@ -96,6 +96,8 @@ class NumberGuesserGame:
                 batch_number = (self.level - 1) // 3
                 base_reward = 1 + 2 * batch_number
                 self.currency_system.add_currency(base_reward)
+                if self.pet_state and hasattr(self.pet_state, 'pet_manager'):
+                    self.pet_state.pet_manager.handle_interaction('play')
                 
                 self.level += 1
                 self.guesses_left = 3 + ((self.level - 1) // 5)
@@ -298,6 +300,8 @@ class ReactionTestGame:
             base_reward = 1 + 2 * ((self.level - 1) // 3)
             self.currency_system.add_currency(base_reward)
             self.level += 1
+            if self.pet_state and hasattr(self.pet_state, 'pet_manager'):
+                self.pet_state.pet_manager.handle_interaction('play')
             
             if time_diff > 0.5:
                 feedback = "Amazing speed! 🚀"
@@ -355,39 +359,24 @@ class BallClickerGame:
         self.black_balls_clicked = 0
         self.required_clicks = 5
         self.ball_spawn_timer = None
+        self._last_end_message_text = None
+        self._last_end_message_success = False
+        self._last_stats_text = None
         self.setup_ui()
-        
-        self.frame.update_idletasks()
-        parent_window = self.frame.winfo_toplevel()
-        parent_window.geometry(f"600x850")
-        parent_window.minsize(600, 850)
-        parent_window.update_idletasks()
-        
-        self.frame.after(100, self._ensure_window_size)
-        self.frame.after(500, self._ensure_window_size)
-        self.frame.after(1000, self._ensure_window_size)
 
-    def _ensure_window_size(self):
-        parent_window = self.frame.winfo_toplevel()
-        
-        parent_window.geometry("600x850")
-        parent_window.minsize(600, 850)
-        parent_window.update_idletasks()
-        
-        if hasattr(self, 'start_button') and not self.start_button.winfo_viewable():
-            parent_window.geometry("650x900")
-            parent_window.update_idletasks()
-    
     def setup_ui(self):
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.rowconfigure(2, weight=1)
+
         self.title_label = ttk.Label(self.frame, text="Ball Clicker", font=("Arial", 16, "bold"), foreground="#2196F3")
-        self.title_label.pack(pady=(10, 5))
-        
+        self.title_label.grid(row=0, column=0, pady=(10, 5))
+
         self.reward_frame = ttk.Frame(self.frame)
-        self.reward_frame.pack(pady=(5, 10))
-        
+        self.reward_frame.grid(row=1, column=0, pady=(5, 10))
+
         batch_number = (self.level - 1) // 3
         base_reward = 1 + 2 * batch_number
-        
+
         self.currency_icon = None
         try:
             import os
@@ -399,76 +388,42 @@ class BallClickerGame:
                 self.currency_icon = ImageTk.PhotoImage(img)
         except Exception as e:
             print(f"Error loading currency icon: {e}")
-        
+
         if self.currency_icon:
             self.icon_label = ttk.Label(self.reward_frame, image=self.currency_icon)
             self.icon_label.pack(side='left', padx=(0, 5))
-        
+
         self.reward_label = ttk.Label(self.reward_frame, text=f"Reward: {base_reward} coins", font=("Arial", 10, "bold"))
         self.reward_label.pack(side='left')
-        
+
         self.game_container = ttk.Frame(self.frame, padding=15, relief="groove")
-        self.game_container.pack(fill='both', expand=True, padx=20, pady=10)
-        
+        self.game_container.grid(row=2, column=0, sticky='nsew', padx=10, pady=10)
+        self.game_container.columnconfigure(0, weight=1)
+        self.game_container.rowconfigure(3, weight=1)
+
         self.info_frame = ttk.Frame(self.game_container)
-        self.info_frame.pack(fill='x', pady=(0, 10))
-        
-        self.score_label = ttk.Label(self.info_frame, 
-                                   text=f"Score: {self.score}", 
-                                   font=("Arial", 12, "bold"),
-                                   foreground="#1976D2")
-        self.score_label.pack(side='left', padx=10)
-        
-        self.progress_label = ttk.Label(self.info_frame, 
-                                      text=f"Clicks: 0/{self.required_clicks}", 
-                                      font=("Arial", 12),
-                                      foreground="#4CAF50")
-        self.progress_label.pack(side='right', padx=10)
-        
-        self.timer_label = ttk.Label(self.game_container, 
-                                   text="Time: 0.00s", 
-                                   font=("Arial", 12),
-                                   foreground="#FF9800")
-        self.timer_label.pack(pady=5)
-        
-        self.level_label = ttk.Label(self.game_container, 
-                                    text=f"Level {self.level}", 
-                                    font=("Arial", 11, "bold"),
-                                    foreground="#673AB7")
-        self.level_label.pack(pady=5)
-        
-        self.canvas_frame = ttk.Frame(self.game_container)
-        self.canvas_frame.pack(pady=10, expand=True, fill='both')
-        
-        self.canvas_frame.columnconfigure(0, weight=1)
-        self.canvas_frame.rowconfigure(0, weight=1)
-        
-        self.canvas = tk.Canvas(self.canvas_frame, 
-                              width=450, 
-                              height=400, 
-                              bg='#f5f5f5',
-                              relief=tk.SUNKEN,
-                              bd=2)
-        self.canvas.grid(row=0, column=0, sticky='nsew')
-        
-        self.game_container.pack_propagate(False)
-        
-        self.canvas_frame.config(width=450, height=400)
-        self.canvas_frame.grid_propagate(False)
-        
-        self.game_container.config(width=500, height=600)
-        
-        self.start_button = tk.Button(self.game_container, 
-                                    text="Start Round", 
-                                    command=self.start_round,
-                                    font=("Arial", 12, "bold"),
-                                    bg="#4CAF50",
-                                    fg="white",
-                                    width=15,
-                                    height=2,
-                                    relief=tk.RAISED,
-                                    borderwidth=2)
-        self.start_button.pack(pady=15)
+        self.info_frame.grid(row=0, column=0, sticky='ew', pady=(0, 10))
+        self.info_frame.columnconfigure(0, weight=1)
+        self.info_frame.columnconfigure(1, weight=1)
+
+        self.score_label = ttk.Label(self.info_frame, text=f"Score: {self.score}", font=("Arial", 12, "bold"), foreground="#1976D2")
+        self.score_label.grid(row=0, column=0, sticky='w')
+
+        self.progress_label = ttk.Label(self.info_frame, text=f"Clicks: 0/{self.required_clicks}", font=("Arial", 12), foreground="#4CAF50")
+        self.progress_label.grid(row=0, column=1, sticky='e')
+
+        self.timer_label = ttk.Label(self.game_container, text="Time: 0.00s", font=("Arial", 12), foreground="#FF9800")
+        self.timer_label.grid(row=1, column=0, pady=5)
+
+        self.level_label = ttk.Label(self.game_container, text=f"Level {self.level}", font=("Arial", 11, "bold"), foreground="#673AB7")
+        self.level_label.grid(row=2, column=0, pady=5)
+
+        self.canvas = tk.Canvas(self.game_container, bg='#f5f5f5', relief=tk.SUNKEN, bd=2, highlightthickness=0)
+        self.canvas.grid(row=3, column=0, sticky='nsew', pady=10)
+        self.canvas.bind("<Configure>", self._on_canvas_resize)
+
+        self.start_button = tk.Button(self.game_container, text="Start Round", command=self.start_round, font=("Arial", 12, "bold"), bg="#4CAF50", fg="white", relief=tk.RAISED, borderwidth=2)
+        self.start_button.grid(row=4, column=0, pady=15)
 
     def start_round(self):
         if self.game_running:
@@ -503,8 +458,10 @@ class BallClickerGame:
         force_black = (self.black_balls_spawned < self.min_black_balls_needed and 
                       elapsed > (self.round_duration * 0.5))
         
-        x = random.randint(20, 380)
-        y = random.randint(20, 280)
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        x = random.randint(15, max(15, canvas_width - 15))
+        y = random.randint(15, max(15, canvas_height - 15))
         
         is_red = random.random() < red_probability and not force_black
         color = 'red' if is_red else 'black'
@@ -552,6 +509,28 @@ class BallClickerGame:
             self.score = max(0, self.score - 2)
             self.score_label.config(text=f"Score: {self.score}")
 
+    def _on_canvas_resize(self, event=None):
+        if not self.game_running: 
+            self.canvas.delete("end_message")
+            self.canvas.delete("stats_message")
+
+            if hasattr(self, '_last_end_message_text') and self._last_end_message_text is not None:
+                canvas_width = self.canvas.winfo_width()
+                canvas_height = self.canvas.winfo_height()
+
+                fill_color = "green" if self._last_end_message_success else ("orange" if self._last_end_message_text.startswith("Time's up!") else "red")
+                self.canvas.create_text(canvas_width / 2, canvas_height / 2,
+                                      text=self._last_end_message_text,
+                                      font=("Arial", 14, "bold" if self._last_end_message_success else ""),
+                                      fill=fill_color,
+                                      tags="end_message")
+
+                if hasattr(self, '_last_stats_text') and self._last_stats_text is not None:
+                    self.canvas.create_text(canvas_width / 2, canvas_height / 2 + 30,
+                                          text=self._last_stats_text,
+                                          font=("Arial", 10), fill="blue",
+                                          tags="stats_message")
+
     def update_timer(self):
         if not self.game_running:
             return
@@ -566,8 +545,10 @@ class BallClickerGame:
             expected_rate = balls_needed / remaining_time if remaining_time > 0 else 0
             
             if expected_rate > 1.5 and balls_needed > 0 and remaining_time > 3.0:
-                x = random.randint(20, 380)
-                y = random.randint(20, 280)
+                canvas_width = self.canvas.winfo_width()
+                canvas_height = self.canvas.winfo_height()
+                x = random.randint(20, canvas_width - 20 if canvas_width > 40 else 20)
+                y = random.randint(20, canvas_height - 20 if canvas_height > 40 else 20)
                 ball = self.canvas.create_oval(x-15, y-15, x+15, y+15, 
                                            fill='black',
                                            outline='gray',
@@ -579,8 +560,10 @@ class BallClickerGame:
                 self.canvas.after(3000, lambda b=ball: self.remove_ball(b))
             
             elif remaining_time < 3.0 and balls_needed > 3:
-                x = random.randint(20, 380)
-                y = random.randint(20, 280)
+                canvas_width = self.canvas.winfo_width()
+                canvas_height = self.canvas.winfo_height()
+                x = random.randint(20, canvas_width - 20 if canvas_width > 40 else 20)
+                y = random.randint(20, canvas_height - 20 if canvas_height > 40 else 20)
                 ball = self.canvas.create_oval(x-15, y-15, x+15, y+15, 
                                            fill='black',
                                            outline='gray',
@@ -610,11 +593,19 @@ class BallClickerGame:
             self.currency_system.add_currency(base_reward)
             self.level += 1
             self.required_clicks = 5 + self.level
+            if self.pet_state and hasattr(self.pet_state, 'pet_manager'):
+                self.pet_state.pet_manager.handle_interaction('play')
             
-            self.canvas.create_text(200, 150, 
-                                  text=f"Level Complete! +{base_reward} coins", 
-                                  font=("Arial", 14, "bold"), 
-                                  fill="green")
+            canvas_width = self.canvas.winfo_width()
+            canvas_height = self.canvas.winfo_height()
+            message_text = f"Level Complete! +{base_reward} coins"
+            self._last_end_message_text = message_text
+            self._last_end_message_success = True
+            self.canvas.create_text(canvas_width / 2, canvas_height / 2,
+                                  text=message_text,
+                                  font=("Arial", 14, "bold"),
+                                  fill="green",
+                                  tags="end_message")
             
             new_batch_number = (self.level - 1) // 3
             new_base_reward = 1 + 2 * new_batch_number
@@ -631,17 +622,29 @@ class BallClickerGame:
                 half_reward = max(1, base_reward // 2)
                 self.currency_system.add_currency(half_reward)
                 
-                self.canvas.create_text(200, 150, 
-                                      text=f"Time's up! +{half_reward} coins", 
-                                      font=("Arial", 14), 
-                                      fill="orange")
+                canvas_width = self.canvas.winfo_width()
+                canvas_height = self.canvas.winfo_height()
+                message_text = f"Time's up! +{half_reward} coins"
+                self._last_end_message_text = message_text
+                self._last_end_message_success = False
+                self.canvas.create_text(canvas_width / 2, canvas_height / 2,
+                                      text=message_text,
+                                      font=("Arial", 14),
+                                      fill="orange",
+                                      tags="end_message")
             else:
                 self.level = max(1, self.level - 1)
                 
-                self.canvas.create_text(200, 150, 
-                                      text="Try again!", 
-                                      font=("Arial", 14), 
-                                      fill="red")
+                canvas_width = self.canvas.winfo_width()
+                canvas_height = self.canvas.winfo_height()
+                message_text = "Try again!"
+                self._last_end_message_text = message_text
+                self._last_end_message_success = False
+                self.canvas.create_text(canvas_width / 2, canvas_height / 2,
+                                      text=message_text,
+                                      font=("Arial", 14),
+                                      fill="red",
+                                      tags="end_message")
             
             new_batch_number = (self.level - 1) // 3
             new_base_reward = 1 + 2 * new_batch_number
@@ -657,14 +660,24 @@ class BallClickerGame:
         self.progress_label.config(text=f"Clicks: 0/{self.required_clicks}")
         
         stats_text = f"Black balls: {self.black_balls_clicked} | Score: {self.score}"
-        self.canvas.create_text(200, 180, text=stats_text, font=("Arial", 10), fill="blue")
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        self._last_stats_text = stats_text
+        self.canvas.create_text(canvas_width / 2, canvas_height / 2 + 30, text=stats_text, font=("Arial", 10), fill="blue", tags="stats_message")
 
 class GameHub:
     def __init__(self, parent, currency_system, pet_state=None):
         self.window = tk.Toplevel(parent)
         self.window.title("Game Hub")
-        self.window.geometry("700x600")
-        self.window.minsize(600, 550)
+
+        screen_width = self.window.winfo_screenwidth()
+        screen_height = self.window.winfo_screenheight()
+
+        width = min(700, int(screen_width * 0.5))
+        height = min(600, int(screen_height * 0.7))
+        
+        self.window.geometry(f"{width}x{height}")
+        self.window.minsize(550, 500)
         self.window.configure(bg='#f0f0f0')
         
         try:

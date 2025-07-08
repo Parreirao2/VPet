@@ -283,7 +283,6 @@ class PetGrowth:
             old_stage = self.stage
             self.stage = new_stage
             
-            # Sync with pet_state.stage if it exists
             if hasattr(self.stats, 'pet_state'):
                 self.stats.pet_state.stage = new_stage
             
@@ -414,7 +413,7 @@ class PetBehavior:
                 result['stat_changes'] = {'health': 15}
             else:
                 self.stats.modify_stat('happiness', -5)
-                result['message'] = 'Pet doesn\'t need medicine right now.'
+                result['message'] = "Pet doesn't need medicine right now."
                 result['stat_changes'] = {'happiness': -5}
                 
         elif interaction_type == 'sleep':

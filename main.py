@@ -6,7 +6,7 @@ import os
 import math
 import shutil
 from datetime import datetime
-from unified_ui import CombinedPanel, SimpleSpeechBubble, SimpleStatusPanel
+from unified_ui import CombinedPanel, SpeechBubble, SimpleStatusPanel
 import pystray
 import random
 import threading
@@ -18,6 +18,7 @@ from poop_system import PoopSystem
 from inventory_system import InventorySystem
 from pet_animation import PetAnimation
 from pet_components import PetStats, PetGrowth
+from context_awareness import ContextAwareness
 
 
 class PetState:
@@ -35,6 +36,11 @@ class PetState:
             'reaction_test': 1,
             'ball_clicker': 1
         }
+        self.poop_system_dirty = False # New attribute to track if there's poop
+
+    def update_pet_display(self):
+        if hasattr(self, 'pet_manager') and hasattr(self.pet_manager, 'animation'):
+            self.pet_manager.animation.update_pet_image()
 
 class VirtualPet:
     def __init__(self, root):
@@ -44,7 +50,7 @@ class VirtualPet:
         self.save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
         os.makedirs(self.save_path, exist_ok=True)
         self.last_save = None
-        self.name = "My Pet"
+        self._name = "My Pet" # Use _name for internal storage
         
         self.settings = {
             'always_on_top': True,
@@ -55,15 +61,14 @@ class VirtualPet:
             'movement_speed': 5,
             'activity_level': 5,
             'poop_frequency': 0.2,
-            'pet_color': 'black'
+            'pet_color': 'black',
+            'context_awareness_enabled': True
         }
         
         self.pet_state = PetState()
+        self.pet_state.pet_manager = self
         # Add reference to pet_state in the stats for synchronization
         self.pet_state.stats.pet_state = self.pet_state
-        
-        # Try to load existing save file on startup
-        self.auto_load_pet()
         
         self.canvas = tk.Canvas(root, width=256, height=256,
                               highlightthickness=0, bg='#010101')
@@ -80,14 +85,16 @@ class VirtualPet:
         print("Initializing poop system...")
         self.poop_system = PoopSystem(self.root, self.canvas, self.pet_state)
         self.pet_state.poop_system = self.poop_system
-        print(f"Poop system initialized with frequency: {self.settings['poop_frequency']}%")
-        
-        print("Forcing initial poop generation for testing...")
-        self.poop_system.check_poop_generation(128, 128)
+        print(f"Poop system initialized with realistic pressure-based mechanics")
         
         self.inventory_system = InventorySystem(self.root, self.canvas, self.pet_state)
         
-        self.pet_state.pet_manager = self
+        # Try to load existing save file on startup - moved here
+        self.auto_load_pet()
+        
+        self.context_awareness = ContextAwareness(self)
+        
+        self.pet_state.context_awareness = self.context_awareness
         
         self.last_click_time = 0
         self.last_happiness_boost_time = 0
@@ -100,10 +107,12 @@ class VirtualPet:
         self.canvas.bind('<Button-1>', self.handle_click)
         self.canvas.bind('<Button-3>', self.handle_right_click)
         self.canvas.bind('<B1-Motion>', self.handle_drag)
+        self.canvas.bind('<ButtonRelease-1>', self.handle_drag_end)
         
         self.update_state()
         
-        self.animation.start_random_movement()
+        if hasattr(self.animation, 'start_random_movement'):
+            self.animation.start_random_movement()
         
         self.setup_system_tray()
         
@@ -114,6 +123,15 @@ class VirtualPet:
         
         if hasattr(self.animation, 'handle_color_change'):
             self.animation.handle_color_change(None, self.settings['pet_color'])
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name
+        self.check_for_cheat_code()
     
     
     
@@ -126,9 +144,18 @@ class VirtualPet:
         
         if hasattr(self.pet_state, 'growth'):
             evolution_occurred = self.pet_state.growth.check_evolution()
-            # Sync stages after evolution check
             if evolution_occurred:
                 self.pet_state.stage = self.pet_state.growth.stage
+        
+        # Periodically check for poop generation
+        if hasattr(self, 'poop_system'):
+            self.poop_system.check_poop_generation(
+                self.root.winfo_x() + self.canvas.winfo_width() // 2,
+                self.root.winfo_y() + self.canvas.winfo_height() // 2
+            )
+        
+        if hasattr(self, 'context_awareness'):
+            self.context_awareness.update_context_awareness()
         
         if hasattr(self, 'icon'):
             if hasattr(self.icon, 'update_icon_menu'):
@@ -183,12 +210,12 @@ class VirtualPet:
         return False
     
     def ensure_movement_after_evolution(self):
-        """Ensure pet starts moving again after evolution"""
         if hasattr(self.animation, 'force_restart_movement'):
             self.animation.force_restart_movement()
         else:
             self.pet_state.is_interacting = False
-            self.animation.start_random_movement()
+            if hasattr(self.animation, 'start_random_movement'):
+                self.animation.start_random_movement()
     
     def handle_click(self, event):
         current_time = datetime.now().timestamp()
@@ -196,7 +223,8 @@ class VirtualPet:
         if current_time - self.last_click_time < 0.3:
             if current_time - self.last_happiness_boost_time > self.happiness_boost_cooldown:
                 self.pet_state.current_animation = 'happy'
-                self.pet_state.stats.modify_stat('happiness', 10)
+                self.pet_state.stats.modify_stat('happiness', 20)
+                self.pet_state.stats.modify_stat('social', 20)
                 self.speech_bubble.show_bubble('happy')
                 
                 self.happiness_boost_cooldown = random.randint(180, 600)
@@ -219,11 +247,21 @@ class VirtualPet:
                 self.animation_reset_timer = None
                 
             if hasattr(self, 'animation') and self.animation:
-                self.animation.start_random_movement()
+                if hasattr(self.animation, 'resume_movement'):
+                    self.animation.resume_movement()
+                elif hasattr(self.animation, 'start_random_movement'):
+                    self.animation.start_random_movement()
     
+    def check_for_cheat_code(self):
+        if self._name == "UUDDLRLRBA":
+            self.pet_state.currency += 10000000
+            print("Cheat code activated! 10,000,000 coins added.")
+            # Optionally, reset the name after applying the cheat
+            # self._name = "My Pet" # Uncomment if you want the name to revert
+
     def reset_pet(self):
         self.pet_state = PetState()
-        self.name = "Pet"
+        self.name = "Pet" # Use the setter to trigger cheat check
         
         self.pet_state.current_animation = 'Standing'
         self.pet_state.direction = 'left'
@@ -307,6 +345,7 @@ class VirtualPet:
             'stage': self.pet_state.stage,
             'currency': self.pet_state.currency,
             'game_progress': self.pet_state.game_progress,
+            'inventory': {item_id: item.quantity for item_id, item in self.inventory_system.items.items() if not item.unlimited},
             'creation_date': datetime.now().isoformat(),
             'save_date': datetime.now().isoformat()
         }
@@ -376,7 +415,7 @@ class VirtualPet:
             with open(filepath, 'r') as f:
                 save_data = json.load(f)
             
-            self.name = save_data.get('name', 'Pet')
+            self.name = save_data.get('name', 'Pet') # Use the setter for pet name
             
             stats_dict = save_data.get('stats', {})
             # Set stats directly instead of using modify_stat to avoid calculation errors
@@ -405,13 +444,15 @@ class VirtualPet:
                 print(f"Loaded currency: {save_data['currency']}")
             
             if 'inventory' in save_data:
-                self.pet_state.inventory = save_data['inventory']
+                for item_id, quantity in save_data['inventory'].items():
+                    if item_id in self.inventory_system.items:
+                        self.inventory_system.items[item_id].quantity = quantity
                 print(f"Loaded inventory: {len(save_data['inventory'])} items")
             
             if 'game_progress' in save_data:
                 self.pet_state.game_progress = save_data['game_progress']
             
-            self.pet_state.current_animation = 'special'
+            # self.pet_state.current_animation = 'special' # Removed hardcoded animation
             
             self.last_save = os.path.basename(filepath)
             
@@ -441,6 +482,9 @@ class VirtualPet:
             result['message'] = 'Your pet enjoyed the food!'
             result['stat_changes']['hunger'] = 20
             self.speech_bubble.show_bubble('feed')
+            
+            if hasattr(self, 'poop_system'):
+                self.poop_system.add_food_consumed(1)
         elif interaction_type == 'play':
             self.pet_state.current_animation = 'playing'
             self.pet_state.stats.modify_stat('happiness', 15)
@@ -486,17 +530,26 @@ class VirtualPet:
     def resume_movement(self):
         self.pet_state.is_interacting = False
         
-        # Use animation system's movement instead of duplicating logic
         if hasattr(self.animation, 'resume_movement'):
             self.animation.resume_movement()
-        elif not self.movement_timer:
-            self.animation.start_random_movement()
+        else:
+            if hasattr(self.animation, 'force_restart_movement'):
+                self.animation.force_restart_movement()
     
     def handle_right_click(self, event):
+        self.pause_movement()
+        
         x = self.root.winfo_x() + event.x
         y = self.root.winfo_y() + event.y
         
-        self.status_panel.show_panel(x, y)
+        try:
+            self.status_panel.show_panel(x, y, on_close_callback=self.on_stats_panel_closed)
+        except TypeError:
+            self.status_panel.show_panel(x, y)
+            self.schedule_resume_movement(5000)
+    
+    def on_stats_panel_closed(self):
+        self.schedule_resume_movement(200)
     
     def show_inventory(self):
         self.inventory_system.show_inventory()
@@ -516,45 +569,18 @@ class VirtualPet:
         y = self.root.winfo_y() + event.y - 128
         self.root.geometry(f'+{x}+{y}')
     
-    def start_random_movement(self):
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        
-        def move_randomly():
-            if not self.pet_state.is_interacting:
-                activity_level = self.settings['activity_level']
-                idle_chance = (11 - activity_level) * 10
-                
-                if random.randint(1, 100) <= idle_chance:
-                    idle_time = random.randint(5000, 15000)
-                    self.pet_state.current_animation = 'Standing'
-                    self.movement_timer = self.root.after(idle_time, move_randomly)
-                    return
-                
-                target_x = random.randint(0, screen_width - 256)
-                target_y = random.randint(0, screen_height - 256)
-                
-                current_x = self.root.winfo_x()
-                self.pet_state.direction = 'right' if target_x > current_x else 'left'
-                
-                self.pet_state.current_animation = 'Walking'
-                
-                self.animation.target_x = target_x
-                self.animation.target_y = target_y
-                self.animation.move_step()
-                
-                delay = int(10000 - (activity_level * 800))
-                self.movement_timer = self.root.after(delay, move_randomly)
-        
-        move_randomly()
+    def handle_drag_end(self, event):
+        self.schedule_resume_movement(500)
+    
     
     def pause_movement(self):
         self.pet_state.is_interacting = True
         
+        if hasattr(self.animation, 'pause_movement'):
+            self.animation.pause_movement()
         if self.movement_timer:
             self.root.after_cancel(self.movement_timer)
             self.movement_timer = None
-            
             
         if self.resume_timer:
             self.root.after_cancel(self.resume_timer)
@@ -646,6 +672,9 @@ class VirtualPet:
                 self.animation.handle_color_change(old_value, value)
             else:
                 self.handle_color_change(old_value, value)
+        elif setting_name == 'context_awareness_enabled':
+            if hasattr(self, 'context_awareness'):
+                self.context_awareness.toggle_monitoring(value)
         
         self.save_settings()
         

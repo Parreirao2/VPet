@@ -27,7 +27,6 @@ class SystemTrayMenu:
                 SystemTrayMenu.create_custom_menu_item(f'Cleanliness: {pet_manager.pet_state.stats.get_stat("cleanliness"):.0f}%', None),
                 SystemTrayMenu.create_custom_menu_item(f'Social: {pet_manager.pet_state.stats.get_stat("social"):.0f}%', None),
                 SystemTrayMenu.create_custom_menu_item(f'Age: {pet_manager.pet_state.stats.get_stat("age"):.1f} days', None),
-
                 SystemTrayMenu.create_custom_menu_item(f'Stage: {pet_manager.pet_state.stage}', None)
             )),
             pystray.Menu.SEPARATOR,

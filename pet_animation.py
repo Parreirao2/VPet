@@ -20,23 +20,35 @@ class PetAnimation:
         self.resume_timer = None
         self.target_x = None
         self.target_y = None
+        self.last_sleep_time = datetime.now()  
         
         self.sickness_icon = None
         self.sickness_icon_id = None
         self.sickness_blink_timer = None
         self.sickness_visible = True
         
+        self.load_animations()
+        if hasattr(self.pet_state, 'growth'):
+            self.pet_state.growth.on_stage_changed = self.handle_stage_change
+        self.root.after(0, self.animate)
+    
+    def _apply_sleep_effects(self):
+        if hasattr(self.pet_state, 'stats'):
+            energy_gain = random.randint(15, 25)  
+            hunger_loss = random.randint(3, 8)    
+            social_loss = random.randint(2, 5)    
+            
+            self.pet_state.stats.modify_stat('energy', energy_gain)
+            self.pet_state.stats.modify_stat('hunger', -hunger_loss)
+            self.pet_state.stats.modify_stat('social', -social_loss)
+            
+        
         if hasattr(self.pet_state, 'stats'):
             self.pet_state.stats.on_sickness_changed = self.update_sickness_display
         
-        if hasattr(self.pet_state, 'growth'):
-            self.pet_state.growth.on_stage_changed = self.handle_stage_change
         
-        self.load_animations()
+        self.pet_state.current_animation = 'Standing'
         
-        self.animate()
-        
-        # Start periodic movement check to prevent getting stuck
         self.start_movement_watchdog()
         
     def handle_stage_change(self, old_stage, new_stage):
@@ -46,7 +58,7 @@ class PetAnimation:
     def play_evolution_animation(self):
         self.pet_state.is_interacting = True
         self.pet_state.current_animation = 'Evolving'
-        self.root.after(2400, self.load_new_stage_animations) # 8 frames * 100ms * 3 cycles
+        self.root.after(2400, self.load_new_stage_animations) 
 
     def load_new_stage_animations(self):
         print("Evolution animation finished, reloading animations for new stage")
@@ -54,8 +66,13 @@ class PetAnimation:
         self.load_animations()
         self.pet_state.is_interacting = False
         self.pet_state.current_animation = 'Standing'
-        # Force restart movement after evolution
         self.force_restart_movement()
+
+    def update_pet_image(self):
+        """Forces the pet's image to update based on its current stage and animation."""
+        self.load_animations()
+        # Immediately trigger a re-render of the pet
+        self.animate()
     
     def handle_color_change(self, old_color, new_color):
         print(f"Pet color changed from {old_color} to {new_color}, reloading animations")
@@ -82,10 +99,10 @@ class PetAnimation:
             try:
                 img_path = os.path.join(base_path_evo, f'Evo{i}.png')
                 if os.path.exists(img_path):
-                    image = Image.open(img_path)
+                    pil_img = Image.open(img_path)
                     size_factor = 4 * (self.settings['pet_size'] / 100)
-                    resized_image = image.resize((int(image.width * size_factor), int(image.height * size_factor)), Image.LANCZOS)
-                    evolution_frames.append(ImageTk.PhotoImage(resized_image))
+                    resized = pil_img.resize((int(pil_img.width * size_factor), int(pil_img.height * size_factor)), Image.LANCZOS)
+                    evolution_frames.append(ImageTk.PhotoImage(resized))
             except Exception as e:
                 print(f'Error loading evolution frame {i}: {e}')
         self.animations['Evolving'] = evolution_frames
@@ -151,11 +168,17 @@ class PetAnimation:
                             break
                 
                 if img_path and os.path.exists(img_path):
-                    image = Image.open(img_path)
+                    pil_img = Image.open(img_path)
                     size_factor = 4 * (self.settings['pet_size'] / 100)
-                    resized_image = image.resize((int(image.width * size_factor), int(image.height * size_factor)), Image.LANCZOS)
+                    resized = pil_img.resize((int(pil_img.width * size_factor), int(pil_img.height * size_factor)), Image.LANCZOS)
                     
-                    self.animations[state] = ImageTk.PhotoImage(resized_image)
+                    photo_normal = ImageTk.PhotoImage(resized)
+                    
+                    flipped = resized.transpose(Image.FLIP_LEFT_RIGHT)
+                    photo_flipped = ImageTk.PhotoImage(flipped)
+                    
+                    self.animations[state] = photo_normal
+                    self.animations[f"{state}_flip"] = photo_flipped
                 else:
                     essential_frames = ['Walk1', 'Walk2', 'Happy']
                     if state in essential_frames:
@@ -298,56 +321,36 @@ class PetAnimation:
                     return
                 frame = sequence[int(datetime.now().timestamp() * 2) % len(sequence)]
                 self.canvas.delete('pet')
-                if frame in self.animations:
-                    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frames')
-                    pet_color = self.settings.get('pet_color', 'black').lower()
-                    
-                    img_path = None
-                    if pet_color == 'black':
-                        possible_paths = [
-                            os.path.join(base_path, f'{self.pet_state.stage}_{frame}.png'),
-                            os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}.png')
-                        ]
-                    else:
-                        possible_paths = [
-                            os.path.join(base_path, f'{self.pet_state.stage}_{frame}_{pet_color}.png'),
-                            os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}_{pet_color}.png')
-                        ]
-                    
-                    for path in possible_paths:
-                        if os.path.exists(path):
-                            img_path = path
-                            break
-                    
-                    if img_path is None or not os.path.exists(img_path):
-                        fallback_paths = [
-                            os.path.join(base_path, f'{self.pet_state.stage}_{frame}.png'),
-                            os.path.join(base_path, f'{self.pet_state.stage.lower()}_{frame}.png')
-                        ]
-                        
-                        for path in fallback_paths:
-                            if os.path.exists(path):
-                                img_path = path
-                                break
-                    
-                    if img_path and os.path.exists(img_path):
-                        image = Image.open(img_path)
-                        size_factor = 4 * (self.settings['pet_size'] / 100)
-                        resized_image = image.resize((int(image.width * size_factor), int(image.height * size_factor)), Image.LANCZOS)
-                        
-                        if self.pet_state.direction == 'right':
-                            resized_image = resized_image.transpose(Image.FLIP_LEFT_RIGHT)
-                        
-                        self.animations[frame] = ImageTk.PhotoImage(resized_image)
-                        self.canvas.create_image(128, 128, image=self.animations[frame], tags='pet')
-                    else:
-                        photoimage = self.animations[frame]
-                        self.canvas.create_image(128, 128, image=photoimage, tags='pet')
-                        print(f"Warning: Could not reload animation frame for {self.pet_state.stage}_{frame}")
-                    
+                
+                # Select the appropriate frame based on direction
+                key = frame
+                flip_key = f"{frame}_flip"
+                photoimage = None
+                
+                if self.pet_state.direction == 'right' and flip_key in self.animations:
+                    photoimage = self.animations[flip_key]
+                elif key in self.animations:
+                    photoimage = self.animations[key]
+                
+                if photoimage:
+                    self.canvas.create_image(128, 128, image=photoimage, tags='pet')
                     self.check_sickness_status()
                 else:
                     print(f"Warning: Animation frame {frame} not found in preloaded animations")
+                    print(f"Available frames: {list(self.animations.keys())}")
+                    print(f"Current animation: {self.pet_state.current_animation}")
+                    print(f"Animation sequences: {animation_sequences}")
+                    # Fallback to Walk1 if available, otherwise any available frame
+                    if 'Walk1' in self.animations:
+                        photoimage = self.animations['Walk1']
+                        self.canvas.create_image(128, 128, image=photoimage, tags='pet')
+                        self.check_sickness_status()
+                    elif len(self.animations) > 0:
+                        # Use any available frame as last resort
+                        available_frame = list(self.animations.keys())[0]
+                        photoimage = self.animations[available_frame]
+                        self.canvas.create_image(128, 128, image=photoimage, tags='pet')
+                        self.check_sickness_status()
         
         except Exception as e:
             print(f'Animation error: {e}')
@@ -364,13 +367,50 @@ class PetAnimation:
                 idle_chance = (11 - activity_level) * 10
                 
                 if random.randint(1, 100) <= idle_chance:
-                    idle_time = random.randint(5000, 15000)
-                    self.pet_state.current_animation = 'Standing'
-                    self.movement_timer = self.root.after(idle_time, move_randomly)
+                    # Decide between standing idle or sleeping
+                    time_since_sleep = (datetime.now() - self.last_sleep_time).total_seconds()
+                    
+                    # Increase sleep chance if pet hasn't slept in a while
+                    base_sleep_chance = 15  # 15% base chance (reduced from 25%)
+                    if time_since_sleep > 600:  # 10 minutes since last sleep (increased from 5)
+                        sleep_chance = min(35, base_sleep_chance + (time_since_sleep - 600) / 120 * 5)  # Max 35% (reduced from 60%)
+                    else:
+                        sleep_chance = base_sleep_chance
+                    
+                    if random.randint(1, 100) <= sleep_chance:
+                        # Pet decides to take a nap
+                        sleep_time = random.randint(8000, 20000)  # 8-20 seconds sleep
+                        self.pet_state.current_animation = 'sleeping'
+                        self.pet_state.is_interacting = True  # Prevent movement during sleep
+                        self.last_sleep_time = datetime.now()
+                        
+                        # Apply sleep stat effects
+                        self._apply_sleep_effects()
+                        
+                        # Schedule wake up
+                        def wake_up():
+                            if self.pet_state.current_animation == 'sleeping':
+                                self.pet_state.current_animation = 'Standing'
+                                self.pet_state.is_interacting = False
+                        
+                        self.root.after(sleep_time, wake_up)
+                        self.movement_timer = self.root.after(sleep_time + 1000, move_randomly)  # Resume movement after waking
+                    else:
+                        # Pet just stands idle
+                        idle_time = random.randint(5000, 15000)
+                        self.pet_state.current_animation = 'Standing'
+                        self.movement_timer = self.root.after(idle_time, move_randomly)
                     return
                 
+                # Avoid the top area if context awareness is active to prevent conflicts with speech bubbles
+                min_y = 0
+                if (hasattr(self.pet_state, 'context_awareness') and 
+                    hasattr(self.pet_state.context_awareness, 'monitoring_enabled') and
+                    self.pet_state.context_awareness.monitoring_enabled):
+                    min_y = 150  # Keep pet away from top 150px when context awareness is active
+                
                 self.target_x = random.randint(0, screen_width - 256)
-                self.target_y = random.randint(0, screen_height - 256)
+                self.target_y = random.randint(min_y, screen_height - 256)
                 
                 current_x = self.root.winfo_x()
                 self.pet_state.direction = 'right' if self.target_x > current_x else 'left'
@@ -398,6 +438,12 @@ class PetAnimation:
         if distance < 5:
             self.pet_state.current_animation = 'Standing'
             return
+        
+        # Update direction based on current movement (fix for direction inconsistency)
+        if abs(dx) > 2:  # Only update direction for significant horizontal movement
+            new_direction = 'right' if dx > 0 else 'left'
+            if new_direction != self.pet_state.direction:
+                self.pet_state.direction = new_direction
         
         speed = self.settings.get('movement_speed', 5)
         step_size = speed * 0.5
@@ -441,10 +487,6 @@ class PetAnimation:
             self.start_random_movement()
     
     def force_restart_movement(self):
-        """Force restart movement system - used after evolution or when pet gets stuck"""
-        print("Force restarting movement system...")
-        
-        # Cancel all existing timers
         if self.movement_timer:
             self.root.after_cancel(self.movement_timer)
             self.movement_timer = None
@@ -457,28 +499,21 @@ class PetAnimation:
             self.root.after_cancel(self.resume_timer)
             self.resume_timer = None
         
-        # Reset state
         self.pet_state.is_interacting = False
         self.pet_state.current_animation = 'Standing'
         
-        # Start movement after a short delay
         self.root.after(1000, self.start_random_movement)
     
     def start_movement_watchdog(self):
-        """Periodic check to ensure pet doesn't get stuck in idle"""
         def check_movement():
-            # If pet has been standing still for too long and isn't interacting, restart movement
             if (not self.pet_state.is_interacting and 
                 self.pet_state.current_animation == 'Standing' and 
                 not self.movement_timer):
                 
-                print("Pet appears stuck - restarting movement")
                 self.force_restart_movement()
             
-            # Schedule next check
-            self.root.after(15000, check_movement)  # Check every 15 seconds
+            self.root.after(15000, check_movement)
         
-        # Start the watchdog
         self.root.after(15000, check_movement)
     
     def schedule_resume_movement(self, delay_ms):

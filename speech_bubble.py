@@ -13,6 +13,10 @@ class SpeechBubble:
         self.bubble_duration = 5000
         self._bubble_timer = None
         self._update_position_timer = None
+        self._repositioning_pet = False  # Flag to prevent repositioning loops
+        self._last_reposition_time = 0  # Track when we last repositioned
+        self._bubble_positioned = False  # Flag to prevent positioning loops
+        self._last_bubble_position = None  # Track last bubble position
         
         self.responses = {
             'feed': [
@@ -274,6 +278,10 @@ class SpeechBubble:
         pet_x = self.parent.winfo_x() + self.canvas.winfo_width() // 2
         pet_y = self.parent.winfo_y() + 100
         
+        # Store pet position for tail direction calculation
+        self.pet_x = pet_x
+        self.pet_y = pet_y
+        
         self.bubble_window = tk.Toplevel(self.parent)
         self.bubble_window.overrideredirect(True)
         self.bubble_window.attributes('-topmost', True)
@@ -349,17 +357,15 @@ class SpeechBubble:
         
         bubble_canvas.create_polygon(border_points, fill="#FFFFCC", outline="", width=0)
         
-        tail_points = [
-            (bubble_width + 15) // 2 + 5, bubble_height + 30,
-            (bubble_width + 15) // 2 - 5, bubble_height + 15,
-            (bubble_width + 15) // 2 + 15, bubble_height + 15
-        ]
-        bubble_canvas.create_polygon(
-            tail_points,
-            fill="#FFFFCC",
-            outline="",
-            width=0
-        )
+        # Store canvas reference and dimensions for tail creation
+        self.bubble_canvas = bubble_canvas
+        self.bubble_width = bubble_width
+        self.bubble_height = bubble_height
+        self.canvas_width = canvas_width
+        self.canvas_height = canvas_height
+        
+        # Create tail - will be positioned correctly in _update_bubble_position
+        self._create_bubble_tail()
         
         # This will be replaced by the stored text reference below
         
@@ -397,17 +403,121 @@ class SpeechBubble:
         pet_x = self.parent.winfo_x() + self.canvas.winfo_width() // 2
         pet_y = self.parent.winfo_y() + 100
         
-        bubble_x = max(0, pet_x - canvas_width // 2)
-        bubble_y = max(0, pet_y - canvas_height)
+        # Calculate ideal bubble position (above pet)
+        bubble_x = pet_x - canvas_width // 2
+        bubble_y = pet_y - canvas_height - 10  # 10px gap between pet and bubble
         
         screen_width = self.parent.winfo_screenwidth()
         screen_height = self.parent.winfo_screenheight()
-        if bubble_x + canvas_width > screen_width:
+        
+        # Adjust horizontal position to stay on screen
+        if bubble_x < 0:
+            bubble_x = 0
+        elif bubble_x + canvas_width > screen_width:
             bubble_x = screen_width - canvas_width
+        
+        # Check if bubble would be cut off at the top
         if bubble_y < 0:
-            bubble_y = 0
+            # Not enough space above pet - place bubble below pet instead
+            bubble_y = pet_y + 50  # Place below pet with upward-pointing tail
+        
+        # Determine if bubble is above or below pet
+        bubble_window_y = bubble_y
+        is_below_pet = bubble_window_y > pet_y
+        
+        # Only update tail direction if position actually changed
+        current_position = (bubble_x, bubble_y, is_below_pet)
+        if not self._bubble_positioned or self._last_bubble_position != current_position:
+            self._update_bubble_tail(is_below_pet)
+            self._last_bubble_position = current_position
+            self._bubble_positioned = True
         
         self.bubble_window.geometry(f"+{bubble_x}+{bubble_y}")
+    
+    def _adjust_pet_position_for_bubble(self, new_y):
+        """Naturally move the pet down to accommodate speech bubble using normal movement speed"""
+        if not hasattr(self.parent, 'winfo_exists') or not self.parent.winfo_exists():
+            return
+            
+        current_x = self.parent.winfo_x()
+        current_y = self.parent.winfo_y()
+        
+        # Only move if the adjustment is reasonable (not too far) and pet isn't already moving
+        if abs(new_y - current_y) < 150:  # Max 150px adjustment
+            
+            # Double-check that pet isn't moving before we start our own movement
+            if (hasattr(self.parent, 'pet_manager') and 
+                hasattr(self.parent.pet_manager, 'pet_state') and 
+                self.parent.pet_manager.pet_state.is_interacting):
+                print("DEBUG: Pet became busy during bubble positioning, aborting movement")
+                return
+            # Try to use the pet's animation system for natural movement
+            if hasattr(self.parent, 'pet_manager') and hasattr(self.parent.pet_manager, 'pet_animation'):
+                pet_animation = self.parent.pet_manager.pet_animation
+                pet_state = self.parent.pet_manager.pet_state
+                settings = self.parent.pet_manager.settings
+                
+                print("DEBUG: Using pet's natural movement system for bubble positioning")
+                
+                # Pause current movement
+                pet_animation.pause_movement()
+                
+                # Set target position (keep same X, move to new Y)
+                pet_animation.target_x = current_x
+                pet_animation.target_y = new_y
+                
+                # Set walking animation and direction (no direction change needed for vertical movement)
+                pet_state.current_animation = 'Walking'
+                
+                # Start natural movement
+                pet_animation.move_step()
+                
+                # Schedule resuming normal behavior after reaching position
+                def check_arrival():
+                    if not self.parent.winfo_exists():
+                        return
+                        
+                    curr_y = self.parent.winfo_y()
+                    distance = abs(new_y - curr_y)
+                    
+                    if distance < 10:  # Close enough
+                        print("DEBUG: Natural bubble positioning movement completed")
+                        pet_state.current_animation = 'Standing'
+                        pet_animation.schedule_resume_movement(1000)  # Resume after 1 second
+                        # Reset repositioning flag when movement is complete
+                        if hasattr(self.parent, 'pet_manager') and hasattr(self.parent.pet_manager, 'speech_bubble'):
+                            self.parent.pet_manager.speech_bubble._repositioning_pet = False
+                    else:
+                        # Check again
+                        self.parent.after(200, check_arrival)
+                
+                self.parent.after(500, check_arrival)
+                
+            else:
+                # Fallback to slower, more natural movement
+                print("DEBUG: Using fallback natural movement for bubble positioning")
+                
+                # Use much slower movement that mimics normal pet speed
+                total_distance = abs(new_y - current_y)
+                # Simulate normal pet movement speed (similar to pet_animation.py)
+                speed = 5  # Default movement speed
+                step_size = speed * 0.5
+                steps = int(total_distance / step_size)
+                steps = max(steps, 10)  # Minimum steps for smoothness
+                
+                step_y = (new_y - current_y) / steps
+                
+                def move_step(step):
+                    if step >= steps or not self.parent.winfo_exists():
+                        self.parent.geometry(f'+{current_x}+{new_y}')
+                        return
+                    
+                    intermediate_y = int(current_y + step_y * step)
+                    self.parent.geometry(f'+{current_x}+{intermediate_y}')
+                    # Use same timing as normal pet movement (50ms)
+                    self.parent.after(50, lambda: move_step(step + 1))
+                
+                move_step(1)
     
     def _start_position_updates(self, canvas_width, canvas_height):
         if self._update_position_timer:
@@ -459,3 +569,64 @@ class SpeechBubble:
         if self.bubble_window:
             self.bubble_window.destroy()
             self.bubble_window = None
+            
+        # Reset repositioning flag when bubble is cleared
+        self._repositioning_pet = False
+        self._bubble_positioned = False
+        self._last_bubble_position = None
+    
+    def _create_bubble_tail(self):
+        """Create the initial bubble tail (pointing down by default)"""
+        if not hasattr(self, 'bubble_canvas'):
+            return
+            
+        # Create tail pointing down (default)
+        tail_points = [
+            (self.bubble_width + 15) // 2 + 5, self.bubble_height + 30,
+            (self.bubble_width + 15) // 2 - 5, self.bubble_height + 15,
+            (self.bubble_width + 15) // 2 + 15, self.bubble_height + 15
+        ]
+        
+        self.bubble_tail_id = self.bubble_canvas.create_polygon(
+            tail_points,
+            fill="#FFFFCC",
+            outline="",
+            width=0,
+            tags="bubble_tail"
+        )
+    
+    def _update_bubble_tail(self, is_below_pet):
+        """Update the bubble tail direction based on bubble position relative to pet"""
+        if not hasattr(self, 'bubble_canvas') or not hasattr(self, 'bubble_tail_id'):
+            return
+            
+        try:
+            # Delete existing tail
+            self.bubble_canvas.delete(self.bubble_tail_id)
+            
+            if is_below_pet:
+                # Bubble is below pet - tail should point up (triangle pointing upward)
+                tail_points = [
+                    (self.bubble_width + 15) // 2, 0,        # Top point (pointing up)
+                    (self.bubble_width + 15) // 2 - 10, 15,  # Bottom left
+                    (self.bubble_width + 15) // 2 + 10, 15   # Bottom right
+                ]
+            else:
+                # Bubble is above pet - tail should point down (default)
+                tail_points = [
+                    (self.bubble_width + 15) // 2 + 5, self.bubble_height + 30,  # Bottom point
+                    (self.bubble_width + 15) // 2 - 5, self.bubble_height + 15,  # Top left
+                    (self.bubble_width + 15) // 2 + 15, self.bubble_height + 15  # Top right
+                ]
+            
+            # Create new tail with correct direction
+            self.bubble_tail_id = self.bubble_canvas.create_polygon(
+                tail_points,
+                fill="#FFFFCC",
+                outline="",
+                width=0,
+                tags="bubble_tail"
+            )
+        except tk.TclError:
+            # Canvas was destroyed, ignore
+            pass

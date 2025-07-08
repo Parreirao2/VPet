@@ -50,12 +50,17 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 
 ### 🎮 Interactive Gameplay
 - **Advanced Feeding System**: 80+ different food items with unique stat effects
-- **Poop System**: Pet creates waste that must be cleaned to maintain cleanliness
+- **Natural Behaviors**: Pet exhibits realistic animal behaviors including random napping and natural waste patterns
 - **Double-Click Interaction**: Double-click your pet for happiness boosts (with cooldown)
 - **Drag & Drop**: Move your pet around your screen freely
 - **Rich Animation System**: Multiple animations for different pet states, moods, and activities
-- **Speech Bubbles**: Your pet communicates needs, emotions, and responses
+- **Smart Speech Bubbles**: Adaptive communication system with intelligent positioning and directional tails
 - **Sickness System**: Pet becomes sick when stats are too low, requiring proper care
+
+### 🧠 Enhanced Natural Behaviors
+- **Random Sleep System**: Pet takes realistic naps like a real animal (25% base chance when idle, increasing to 60% if pet hasn't slept recently)
+- **Natural Pooping System**: Realistic waste management that increases over time and after eating, with proper cooldown periods after pooping
+- **Smooth Animations**: Natural movement speed with proper direction-aware sprite flipping for realistic motion
 
 ### 🤖 AI Chat System
 - **Intelligent Conversations**: Chat with your pet using Google Gemini AI models
@@ -66,6 +71,12 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 - **Typewriter Effect**: Responses appear with realistic typing animation
 - **Friendly Error Handling**: User-friendly error messages for API issues
 - **Secure Storage**: API keys stored locally and securely
+
+### 🧠 Context Awareness
+- **Application Monitoring**: The pet actively monitors the applications you are using and can comment on them, bringing a new level of interaction.
+- **Intelligent Movement**: VPet is aware of your workspace and will intelligently move away from active application windows to avoid obstructing your view.
+- **Smart Responses**: The AI can provide context-aware responses based on the detected application, with a memory system to provide relevant follow-up comments.
+- **Frequency Control**: To avoid being intrusive, the pet uses smart frequency control to limit how often it comments on your applications.
 
 ### 💰 Currency & Game Hub
 - **Coin Economy**: Earn coins through gameplay and pet care activities
@@ -131,73 +142,25 @@ A modern desktop Tamagotchi-style virtual pet that lives on your computer screen
 
 - **Left-click**: Select your pet
 - **Double-click**: Give your pet a happiness boost (has cooldown)
-- **Right-click**: Open the context menu with options
+- **Right-click**: Open the context menu to see your pet's stats at a glance
 - **Drag**: Move your pet around the screen
 
 ## 💕 Caring For Your Pet
 
-### 🍔 Complete Food Menu & Effects
+### 🍔 Feeding Your Pet
 
-Access the inventory through the right-click menu to feed your pet. All 80+ food items with their effects:
+Access the inventory through the right-click menu to feed your pet from 80+ different food items including:
 
-#### 🥖 Bakery Items (15-35 coins)
-- **Bread** (20 coins): Hunger +3, Happiness +1, Energy +2
-- **Bun** (15 coins): Hunger +2, Happiness +1, Energy +1
-- **Baguette** (35 coins): Hunger +4, Happiness +2, Energy +3, Health +1, Cleanliness -1
-- **Loaf Bread** (25 coins): Hunger +3, Happiness +1, Energy +2, Health +1
-- **Bagel** (25 coins): Hunger +3, Happiness +2, Energy +2, Health +1, Cleanliness -1
-- **Garlic Bread** (25 coins): Hunger +3, Happiness +2, Energy +2, Cleanliness -2
+- **🥖 Bakery Items**: Bread, buns, baguettes, bagels (15-35 coins)
+- **🍰 Desserts & Sweets**: Chocolate, cakes, cookies, pies (20-60 coins)  
+- **🍖 Main Dishes**: Steak, salmon, burgers, pizza (30-70 coins)
+- **🍜 International Cuisine**: Ramen, spaghetti, curry, sushi (35-50 coins)
+- **🥞 Breakfast Items**: Pancakes, waffles, eggs, bacon (20-40 coins)
+- **🍿 Snacks & Sides**: Fries, popcorn, chips, ice cream (20-45 coins)
+- **🥗 Healthy Options**: Salads, fruits, vegetables (15-40 coins)
+- **🥤 Beverages**: Water, juices, sodas, coffee (10-30 coins)
 
-#### 🍰 Desserts & Sweets (20-60 coins)
-- **Chocolate** (35 coins): Hunger +1, Happiness +5, Energy +3, Health -1, Cleanliness -1
-- **Cookies** (25 coins): Hunger +2, Happiness +4, Energy +2, Health -1, Cleanliness -1
-- **Donut** (20 coins): Hunger +2, Happiness +4, Energy +2, Health -2, Cleanliness -1
-- **Cheesecake** (50 coins): Hunger +3, Happiness +5, Energy +2, Health -2, Cleanliness -1
-- **Chocolate Cake** (55 coins): Hunger +3, Happiness +5, Energy +2, Health -3, Cleanliness -2
-- **Strawberry Cake** (55 coins): Hunger +3, Happiness +5, Energy +2, Health -2, Cleanliness -2
-- **Fruit Cake** (40 coins): Hunger +3, Happiness +2, Energy +2, Health +1, Cleanliness -1
-- **Apple Pie** (45 coins): Hunger +3, Happiness +4, Energy +2, Cleanliness -2
-- **Lemon Pie** (45 coins): Hunger +3, Happiness +4, Energy +2, Health -1, Cleanliness -2
-- **Pudding** (30 coins): Hunger +2, Happiness +4, Energy +1, Health -1, Cleanliness -1
-- **Jelly** (20 coins): Hunger +1, Happiness +3, Energy +1, Health -1, Cleanliness -1
-- **Jam** (15 coins): Hunger +1, Happiness +3, Energy +1, Cleanliness -1
-- **Giant Gummy Bear** (60 coins): Hunger +2, Happiness +5, Energy +3, Health -3, Cleanliness -2
-- **Gingerbread Man** (35 coins): Hunger +2, Happiness +4, Energy +2, Health -1, Cleanliness -1
-
-#### 🍖 Main Dishes (30-70 coins)
-- **Steak** (70 coins): Hunger +5, Happiness +4, Energy +4, Health +2, Cleanliness -2
-- **Salmon** (55 coins): Hunger +4, Happiness +2, Energy +3, Health +3, Cleanliness -1
-- **Roasted Chicken** (60 coins): Hunger +5, Happiness +3, Energy +4, Health +2, Cleanliness -2
-- **Burger** (45 coins): Hunger +5, Happiness +4, Energy +3, Health -2, Cleanliness -2
-- **Hot Dog** (30 coins): Hunger +3, Happiness +3, Energy +2, Health -2, Cleanliness -2
-- **Pizza** (50 coins): Hunger +4, Happiness +4, Energy +3, Health -2, Cleanliness -2
-- **Sandwich** (30 coins): Hunger +3, Happiness +2, Energy +3, Health +1, Cleanliness -1
-- **Sushi** (50 coins): Hunger +3, Happiness +3, Energy +2, Health +3, Cleanliness -1
-- **Taco** (35 coins): Hunger +3, Happiness +3, Energy +2, Cleanliness -2
-- **Burrito** (40 coins): Hunger +4, Happiness +3, Energy +3, Health -1, Cleanliness -2
-
-#### 🍜 International Cuisine (35-50 coins)
-- **Ramen** (35 coins): Hunger +4, Happiness +3, Energy +3, Cleanliness -2
-- **Spaghetti** (45 coins): Hunger +4, Happiness +3, Energy +3, Health +1, Cleanliness -2
-- **Curry** (50 coins): Hunger +4, Happiness +3, Energy +3, Health +2, Cleanliness -2
-- **Dumplings** (35 coins): Hunger +3, Happiness +2, Energy +2, Health +1, Cleanliness -1
-- **Mac and Cheese** (40 coins): Hunger +4, Happiness +3, Energy +3, Health -1, Cleanliness -2
-
-#### 🥞 Breakfast Items (20-40 coins)
-- **Pancakes** (35 coins): Hunger +3, Happiness +3, Energy +2, Health -1, Cleanliness -1
-- **Waffle** (30 coins): Hunger +3, Happiness +3, Energy +2, Health -1, Cleanliness -1
-- **Fried Egg** (20 coins): Hunger +2, Happiness +1, Energy +2, Health +1, Cleanliness -1
-- **Omelet** (40 coins): Hunger +3, Happiness +2, Energy +3, Health +2, Cleanliness -1
-- **Bacon** (25 coins): Hunger +2, Happiness +3, Energy +2, Health -1, Cleanliness -2
-
-#### 🍿 Snacks & Sides (20-45 coins)
-- **French Fries** (30 coins): Hunger +3, Happiness +4, Energy +2, Health -2, Cleanliness -2
-- **Nacho** (30 coins): Hunger +2, Happiness +4, Energy +1, Health -2, Cleanliness -3
-- **Popcorn Bowl** (25 coins): Hunger +2, Happiness +3, Energy +1, Health -1, Cleanliness -2
-- **Potato Chips Bowl** (20 coins): Hunger +2, Happiness +3, Energy +1, Health -2, Cleanliness -2
-- **Cheesepuff Bowl** (30 coins): Hunger +2, Happiness +4, Energy +1, Health -2, Cleanliness -3
-- **Ice Cream Bowl** (45 coins): Hunger +2, Happiness +5, Energy +1, Health -2, Cleanliness -2
-- **Meatball** (35 coins): Hunger +3, Happiness +2, Energy +3, Health +1, Cleanliness -1
+Each food item has unique effects on your pet's stats - some boost happiness and energy while others may affect health or cleanliness. Choose wisely based on your pet's current needs!
 - **Egg Salad Bowl** (40 coins): Hunger +3, Happiness +1, Energy +2, Health +2, Cleanliness -1
 - **Egg Tart** (25 coins): Hunger +2, Happiness +3, Energy +1, Cleanliness -1
 
@@ -260,10 +223,13 @@ Your pet creates waste that affects cleanliness:
 - **Context Awareness**: AI knows about all game features and can provide guidance
 - **Error Handling**: Friendly messages for API issues or credit problems
 
+> **Note**: Your API key is stored locally in the `saves` directory. Do not share this folder with anyone to protect your key.
+
 ## 🎨 Customization
 
 Access settings through the system tray icon to customize:
 
+- Pet name
 - Pet size
 - Transparency
 - Movement speed
@@ -297,5 +263,10 @@ This application is built with:
 - `game_hub.py`: Mini-games implementation including Number Guesser and Reaction Test
 - `speech_bubble.py`: Pet communication system
 - `system_tray.py`: System tray integration and menu controls
+- `context_awareness.py`: Monitors active applications and triggers pet responses, enabling the pet to react to your computer usage.
 - `frames/`: Animation frame images for different pet stages and colors
 - `img_assets/`: Food, item, and currency images
+
+## 🤫 Cheat Codes
+
+- **Unlock 10,000,000 coins**: Change your pet's name to `UUDDLRLRBA` in the settings to activate the cheat.

@@ -130,55 +130,64 @@ class InventorySystem:
                 self.items["evo2"] = evo2
 
             food_items = [
-                ("baguette", "Baguette", "Hunger: +4, Happiness: +2, Energy: +3, Health: +1, Cleanliness: -1", 35),
-                ("bread", "Bread", "Hunger: +3, Happiness: +1, Energy: +2, Health: 0, Cleanliness: 0", 20),
+                # Basic/Cheap Items (15-25 coins) - Simple, balanced stats
                 ("bun", "Bun", "Hunger: +2, Happiness: +1, Energy: +1, Health: 0, Cleanliness: 0", 15),
-                ("burger", "Burger", "Hunger: +5, Happiness: +4, Energy: +3, Health: -2, Cleanliness: -2", 45),
-                ("burrito", "Burrito", "Hunger: +4, Happiness: +3, Energy: +3, Health: -1, Cleanliness: -2", 40),
-                ("cheesecake", "Cheesecake", "Hunger: +3, Happiness: +5, Energy: +2, Health: -2, Cleanliness: -1", 50),
-                ("cheesepuff_bowl", "Cheesepuff Bowl", "Hunger: +2, Happiness: +4, Energy: +1, Health: -2, Cleanliness: -3", 30),
-                ("chocolate", "Chocolate", "Hunger: +1, Happiness: +5, Energy: +3, Health: -1, Cleanliness: -1", 35),
-                ("chocolatecake", "Chocolate Cake", "Hunger: +3, Happiness: +5, Energy: +2, Health: -3, Cleanliness: -2", 55),
-                ("cookies", "Cookies", "Hunger: +2, Happiness: +4, Energy: +2, Health: -1, Cleanliness: -1", 25),
-                ("curry", "Curry", "Hunger: +4, Happiness: +3, Energy: +3, Health: +2, Cleanliness: -2", 50),
-                ("donut", "Donut", "Hunger: +2, Happiness: +4, Energy: +2, Health: -2, Cleanliness: -1", 20),
-                ("dumplings", "Dumplings", "Hunger: +3, Happiness: +2, Energy: +2, Health: +1, Cleanliness: -1", 35),
-                ("eggsalad_bowl", "Egg Salad Bowl", "Hunger: +3, Happiness: +1, Energy: +2, Health: +2, Cleanliness: -1", 40),
-                ("eggtart", "Egg Tart", "Hunger: +2, Happiness: +3, Energy: +1, Health: 0, Cleanliness: -1", 25),
-                ("frenchfries", "French Fries", "Hunger: +3, Happiness: +4, Energy: +2, Health: -2, Cleanliness: -2", 30),
-                ("friedegg", "Fried Egg", "Hunger: +2, Happiness: +1, Energy: +2, Health: +1, Cleanliness: -1", 20),
-                ("fruitcake", "Fruitcake", "Hunger: +3, Happiness: +2, Energy: +2, Health: +1, Cleanliness: -1", 40),
-                ("garlicbread", "Garlic Bread", "Hunger: +3, Happiness: +2, Energy: +2, Health: 0, Cleanliness: -2", 25),
-                ("giantgummybear", "Giant Gummy Bear", "Hunger: +2, Happiness: +5, Energy: +3, Health: -3, Cleanliness: -2", 60),
-                ("gingerbreadman", "Gingerbread Man", "Hunger: +2, Happiness: +4, Energy: +2, Health: -1, Cleanliness: -1", 35),
-                ("hotdog", "Hot Dog", "Hunger: +3, Happiness: +3, Energy: +2, Health: -2, Cleanliness: -2", 30),
-                ("icecream_bowl", "Ice Cream Bowl", "Hunger: +2, Happiness: +5, Energy: +1, Health: -2, Cleanliness: -2", 45),
-                ("jam", "Jam", "Hunger: +1, Happiness: +3, Energy: +1, Health: 0, Cleanliness: -1", 15),
-                ("jelly", "Jelly", "Hunger: +1, Happiness: +3, Energy: +1, Health: -1, Cleanliness: -1", 20),
-                ("lemonpie", "Lemon Pie", "Hunger: +3, Happiness: +4, Energy: +2, Health: -1, Cleanliness: -2", 45),
-                ("loafbread", "Loaf Bread", "Hunger: +3, Happiness: +1, Energy: +2, Health: +1, Cleanliness: 0", 25),
-                ("macncheese", "Mac and Cheese", "Hunger: +4, Happiness: +3, Energy: +3, Health: -1, Cleanliness: -2", 40),
-                ("meatball", "Meatball", "Hunger: +3, Happiness: +2, Energy: +3, Health: +1, Cleanliness: -1", 35),
-                ("nacho", "Nacho", "Hunger: +2, Happiness: +4, Energy: +1, Health: -2, Cleanliness: -3", 30),
-                ("omlet", "Omelet", "Hunger: +3, Happiness: +2, Energy: +3, Health: +2, Cleanliness: -1", 40),
-                ("pancakes", "Pancakes", "Hunger: +3, Happiness: +3, Energy: +2, Health: -1, Cleanliness: -1", 35),
-                ("pizza", "Pizza", "Hunger: +4, Happiness: +4, Energy: +3, Health: -2, Cleanliness: -2", 50),
-                ("popcorn_bowl", "Popcorn Bowl", "Hunger: +2, Happiness: +3, Energy: +1, Health: -1, Cleanliness: -2", 25),
-                ("potatochips_bowl", "Potato Chips Bowl", "Hunger: +2, Happiness: +3, Energy: +1, Health: -2, Cleanliness: -2", 20),
-                ("pudding", "Pudding", "Hunger: +2, Happiness: +4, Energy: +1, Health: -1, Cleanliness: -1", 30),
-                ("ramen", "Ramen", "Hunger: +4, Happiness: +3, Energy: +3, Health: 0, Cleanliness: -2", 35),
-                ("roastedchicken", "Roasted Chicken", "Hunger: +5, Happiness: +3, Energy: +4, Health: +2, Cleanliness: -2", 60),
-                ("salmon", "Salmon", "Hunger: +4, Happiness: +2, Energy: +3, Health: +3, Cleanliness: -1", 55),
-                ("sandwich", "Sandwich", "Hunger: +3, Happiness: +2, Energy: +3, Health: +1, Cleanliness: -1", 30),
-                ("spaghetti", "Spaghetti", "Hunger: +4, Happiness: +3, Energy: +3, Health: +1, Cleanliness: -2", 45),
-                ("steak", "Steak", "Hunger: +5, Happiness: +4, Energy: +4, Health: +2, Cleanliness: -2", 70),
-                ("strawberrycake", "Strawberry Cake", "Hunger: +3, Happiness: +5, Energy: +2, Health: -2, Cleanliness: -2", 55),
-                ("sushi", "Sushi", "Hunger: +3, Happiness: +3, Energy: +2, Health: +3, Cleanliness: -1", 50),
-                ("taco", "Taco", "Hunger: +3, Happiness: +3, Energy: +2, Health: 0, Cleanliness: -2", 35),
-                ("waffle", "Waffle", "Hunger: +3, Happiness: +3, Energy: +2, Health: -1, Cleanliness: -1", 30),
-                ("applepie", "Apple Pie", "Hunger: +3, Happiness: +4, Energy: +2, Health: 0, Cleanliness: -2", 45),
-                ("bacon", "Bacon", "Hunger: +2, Happiness: +3, Energy: +2, Health: -1, Cleanliness: -2", 25),
-                ("bagel", "Bagel", "Hunger: +3, Happiness: +2, Energy: +2, Health: +1, Cleanliness: -1", 25)
+                ("jam", "Jam", "Hunger: +1, Happiness: +3, Energy: +2, Health: 0, Cleanliness: -1", 15),
+                ("bread", "Bread", "Hunger: +3, Happiness: +1, Energy: +2, Health: +1, Cleanliness: 0", 20),
+                ("donut", "Donut", "Hunger: +2, Happiness: +3, Energy: +3, Health: -1, Cleanliness: -1", 20),
+                ("friedegg", "Fried Egg", "Hunger: +3, Happiness: +1, Energy: +2, Health: +1, Cleanliness: -1", 20),
+                ("jelly", "Jelly", "Hunger: +1, Happiness: +4, Energy: +2, Health: -1, Cleanliness: -1", 20),
+                ("potatochips_bowl", "Potato Chips Bowl", "Hunger: +2, Happiness: +4, Energy: +1, Health: -2, Cleanliness: -2", 20),
+                
+                # Mid-tier Items (25-35 coins) - Better stats but with trade-offs
+                ("bagel", "Bagel", "Hunger: +4, Happiness: +2, Energy: +2, Health: +1, Cleanliness: -1", 25),
+                ("bacon", "Bacon", "Hunger: +3, Happiness: +3, Energy: +3, Health: -1, Cleanliness: -2", 25),
+                ("cookies", "Cookies", "Hunger: +2, Happiness: +5, Energy: +2, Health: -2, Cleanliness: -1", 25),
+                ("eggtart", "Egg Tart", "Hunger: +3, Happiness: +3, Energy: +2, Health: 0, Cleanliness: -1", 25),
+                ("garlicbread", "Garlic Bread", "Hunger: +4, Happiness: +2, Energy: +2, Health: +1, Cleanliness: -2", 25),
+                ("loafbread", "Loaf Bread", "Hunger: +4, Happiness: +1, Energy: +3, Health: +2, Cleanliness: 0", 25),
+                ("popcorn_bowl", "Popcorn Bowl", "Hunger: +2, Happiness: +4, Energy: +2, Health: -1, Cleanliness: -2", 25),
+                ("cheesepuff_bowl", "Cheesepuff Bowl", "Hunger: +2, Happiness: +5, Energy: +2, Health: -2, Cleanliness: -3", 30),
+                ("frenchfries", "French Fries", "Hunger: +3, Happiness: +5, Energy: +2, Health: -2, Cleanliness: -3", 30),
+                ("hotdog", "Hot Dog", "Hunger: +4, Happiness: +3, Energy: +3, Health: -2, Cleanliness: -2", 30),
+                ("nacho", "Nacho", "Hunger: +3, Happiness: +5, Energy: +2, Health: -2, Cleanliness: -3", 30),
+                ("pudding", "Pudding", "Hunger: +2, Happiness: +5, Energy: +2, Health: -1, Cleanliness: -1", 30),
+                ("sandwich", "Sandwich", "Hunger: +4, Happiness: +2, Energy: +3, Health: +2, Cleanliness: -1", 30),
+                ("waffle", "Waffle", "Hunger: +3, Happiness: +4, Energy: +3, Health: -1, Cleanliness: -1", 30),
+                
+                # Good Items (35-45 coins) - Higher stats with meaningful trade-offs
+                ("baguette", "Baguette", "Hunger: +5, Happiness: +2, Energy: +3, Health: +2, Cleanliness: -1", 35),
+                ("chocolate", "Chocolate", "Hunger: +2, Happiness: +6, Energy: +4, Health: -1, Cleanliness: -1", 35),
+                ("dumplings", "Dumplings", "Hunger: +4, Happiness: +2, Energy: +3, Health: +2, Cleanliness: -1", 35),
+                ("gingerbreadman", "Gingerbread Man", "Hunger: +3, Happiness: +5, Energy: +3, Health: -1, Cleanliness: -1", 35),
+                ("meatball", "Meatball", "Hunger: +4, Happiness: +2, Energy: +4, Health: +2, Cleanliness: -1", 35),
+                ("pancakes", "Pancakes", "Hunger: +4, Happiness: +4, Energy: +3, Health: -1, Cleanliness: -1", 35),
+                ("ramen", "Ramen", "Hunger: +5, Happiness: +3, Energy: +4, Health: +1, Cleanliness: -2", 35),
+                ("taco", "Taco", "Hunger: +4, Happiness: +3, Energy: +3, Health: +1, Cleanliness: -2", 35),
+                ("burrito", "Burrito", "Hunger: +5, Happiness: +3, Energy: +4, Health: -1, Cleanliness: -2", 40),
+                ("eggsalad_bowl", "Egg Salad Bowl", "Hunger: +4, Happiness: +2, Energy: +3, Health: +3, Cleanliness: -1", 40),
+                ("fruitcake", "Fruitcake", "Hunger: +4, Happiness: +3, Energy: +3, Health: +2, Cleanliness: -1", 40),
+                ("macncheese", "Mac and Cheese", "Hunger: +5, Happiness: +4, Energy: +3, Health: -1, Cleanliness: -2", 40),
+                ("omlet", "Omelet", "Hunger: +4, Happiness: +2, Energy: +4, Health: +3, Cleanliness: -1", 40),
+                ("burger", "Burger", "Hunger: +6, Happiness: +4, Energy: +4, Health: -2, Cleanliness: -3", 45),
+                ("icecream_bowl", "Ice Cream Bowl", "Hunger: +3, Happiness: +6, Energy: +2, Health: -2, Cleanliness: -2", 45),
+                ("lemonpie", "Lemon Pie", "Hunger: +4, Happiness: +5, Energy: +3, Health: -1, Cleanliness: -2", 45),
+                ("applepie", "Apple Pie", "Hunger: +4, Happiness: +5, Energy: +3, Health: +1, Cleanliness: -2", 45),
+                ("spaghetti", "Spaghetti", "Hunger: +5, Happiness: +3, Energy: +4, Health: +2, Cleanliness: -2", 45),
+                
+                # Premium Items (50-60 coins) - High stats with significant drawbacks
+                ("cheesecake", "Cheesecake", "Hunger: +4, Happiness: +6, Energy: +3, Health: -2, Cleanliness: -2", 50),
+                ("curry", "Curry", "Hunger: +5, Happiness: +3, Energy: +4, Health: +3, Cleanliness: -3", 50),
+                ("pizza", "Pizza", "Hunger: +6, Happiness: +5, Energy: +4, Health: -2, Cleanliness: -3", 50),
+                ("sushi", "Sushi", "Hunger: +4, Happiness: +4, Energy: +3, Health: +4, Cleanliness: -1", 50),
+                ("chocolatecake", "Chocolate Cake", "Hunger: +4, Happiness: +6, Energy: +3, Health: -3, Cleanliness: -2", 55),
+                ("salmon", "Salmon", "Hunger: +5, Happiness: +3, Energy: +4, Health: +4, Cleanliness: -1", 55),
+                ("strawberrycake", "Strawberry Cake", "Hunger: +4, Happiness: +6, Energy: +3, Health: -2, Cleanliness: -2", 55),
+                ("giantgummybear", "Giant Gummy Bear", "Hunger: +3, Happiness: +7, Energy: +5, Health: -3, Cleanliness: -3", 60),
+                ("roastedchicken", "Roasted Chicken", "Hunger: +6, Happiness: +4, Energy: +5, Health: +3, Cleanliness: -2", 60),
+                
+                # Luxury Item (70 coins) - Best overall stats but expensive
+                ("steak", "Steak", "Hunger: +7, Happiness: +5, Energy: +6, Health: +3, Cleanliness: -2", 70)
             ]
             
             new_recipes_path = os.path.join(img_path, 'New_recipes')
@@ -479,9 +488,9 @@ class InventorySystem:
         return False
 
     def buy_item(self, item_id):
-        if item_id == "evo1" and self.pet_state.stage == "Adult":
+        if item_id == "evo1" and (self.pet_state.stage == "Adult" or self.pet_state.stage == "Special"):
             if self.inventory_window and self.inventory_window.winfo_exists():
-                message = tk.Label(self.inventory_window, text="Pet is already at max stage!", 
+                message = tk.Label(self.inventory_window, text="Pet is already at max stage!",
                                   bg=COLORS['warning'], fg="white",
                                   font=("Arial", 10, "bold"),
                                   padx=10, pady=5)
@@ -563,6 +572,7 @@ class InventorySystem:
             is_food_item = True
             if hasattr(self.pet_state, 'pet_manager'):
                 self.pet_state.pet_manager.handle_interaction('feed')
+            self.pet_state.stats.modify_stat('social', 5) # Increase social for food items
         elif item.name == "Toilet Paper":
             if hasattr(self.pet_state, 'poop_system'):
                 num_poops = len(self.pet_state.poop_system.poops)
@@ -572,6 +582,7 @@ class InventorySystem:
                     self.pet_state.poop_system.remove_poop(poop_index)
                     
                     stats['cleanliness'] = min(100, stats['cleanliness'] + 15)
+                    self.pet_state.stats.modify_stat('social', 3) # Increase social for toilet paper
                     return True
                 else:
                     if self.inventory_window and self.inventory_window.winfo_exists():
@@ -585,9 +596,10 @@ class InventorySystem:
                     return False
         elif item.name == "Shower":
             stats['cleanliness'] = min(100, stats['cleanliness'] + 15)
+            self.pet_state.stats.modify_stat('social', 5) # Increase social for shower
             
             if self.inventory_window and self.inventory_window.winfo_exists():
-                message = tk.Label(self.inventory_window, text="Cleanliness +15%!", 
+                message = tk.Label(self.inventory_window, text="Cleanliness +15%!",
                                   bg=COLORS['success'], fg="white",
                                   font=("Arial", 10, "bold"),
                                   padx=10, pady=5)
@@ -618,7 +630,27 @@ class InventorySystem:
                 item.quantity += 1
                 return False
         elif item.name == "Evo2":
-            self.pet_state.growth.evolve_to("Special")
+            if self.pet_state.stage != "Special":
+                self.pet_state.growth.evolve_to("Special")
+                if self.inventory_window and self.inventory_window.winfo_exists():
+                    message = tk.Label(self.inventory_window, text="Your pet evolved to Special stage!",
+                                      bg=COLORS['success'], fg="white",
+                                      font=("Arial", 10, "bold"),
+                                      padx=10, pady=5)
+                    message.place(relx=0.5, rely=0.1, anchor="center")
+                    self.inventory_window.after(2000, message.destroy)
+                if hasattr(self.pet_state, 'update_pet_display'): # Assuming this method exists or will be added
+                    self.pet_state.update_pet_display()
+            else:
+                if self.inventory_window and self.inventory_window.winfo_exists():
+                    message = tk.Label(self.inventory_window, text="Pet is already in Special stage!",
+                                      bg=COLORS['warning'], fg="white",
+                                      font=("Arial", 10, "bold"),
+                                      padx=10, pady=5)
+                    message.place(relx=0.5, rely=0.1, anchor="center")
+                    self.inventory_window.after(2000, message.destroy)
+                item.quantity += 1 # Refund item if already in special stage
+                return False
         
         if hasattr(self.pet_state, 'update_stats_display'):
             self.pet_state.update_stats_display()
@@ -1081,24 +1113,34 @@ class InventorySystem:
         if item_id == "evo2":
             return 1000000
             
-        # Get price from food items list
+        # Get price from food items list (organized by price tiers)
         food_items = [
-            ("baguette", 35), ("bread", 20), ("bun", 15), ("burger", 45),
-            ("burrito", 40), ("cheesecake", 50), ("cheesepuff_bowl", 30),
-            ("chocolate", 35), ("chocolatecake", 55), ("cookies", 25),
-            ("curry", 50), ("donut", 20), ("dumplings", 35),
-            ("eggsalad_bowl", 40), ("eggtart", 25), ("frenchfries", 30),
-            ("friedegg", 20), ("fruitcake", 40), ("garlicbread", 25),
-            ("giantgummybear", 60), ("gingerbreadman", 35), ("hotdog", 30),
-            ("icecream_bowl", 45), ("jam", 15), ("jelly", 20),
-            ("lemonpie", 45), ("loafbread", 25), ("macncheese", 40),
-            ("meatball", 35), ("nacho", 30), ("omlet", 40),
-            ("pancakes", 35), ("pizza", 50), ("popcorn_bowl", 25),
-            ("potatochips_bowl", 20), ("pudding", 30), ("ramen", 35),
-            ("roastedchicken", 60), ("salmon", 55), ("sandwich", 30),
-            ("spaghetti", 45), ("steak", 70), ("strawberrycake", 55),
-            ("sushi", 50), ("taco", 35), ("waffle", 30),
-            ("applepie", 45), ("bacon", 25), ("bagel", 25)
+            # Basic/Cheap Items (15-25 coins)
+            ("bun", 15), ("jam", 15), ("bread", 20), ("donut", 20),
+            ("friedegg", 20), ("jelly", 20), ("potatochips_bowl", 20),
+            ("bagel", 25), ("bacon", 25), ("cookies", 25), ("eggtart", 25),
+            ("garlicbread", 25), ("loafbread", 25), ("popcorn_bowl", 25),
+            
+            # Mid-tier Items (30-35 coins)
+            ("cheesepuff_bowl", 30), ("frenchfries", 30), ("hotdog", 30),
+            ("nacho", 30), ("pudding", 30), ("sandwich", 30), ("waffle", 30),
+            ("baguette", 35), ("chocolate", 35), ("dumplings", 35),
+            ("gingerbreadman", 35), ("meatball", 35), ("pancakes", 35),
+            ("ramen", 35), ("taco", 35),
+            
+            # Good Items (40-45 coins)
+            ("burrito", 40), ("eggsalad_bowl", 40), ("fruitcake", 40),
+            ("macncheese", 40), ("omlet", 40), ("burger", 45),
+            ("icecream_bowl", 45), ("lemonpie", 45), ("applepie", 45),
+            ("spaghetti", 45),
+            
+            # Premium Items (50-60 coins)
+            ("cheesecake", 50), ("curry", 50), ("pizza", 50), ("sushi", 50),
+            ("chocolatecake", 55), ("salmon", 55), ("strawberrycake", 55),
+            ("giantgummybear", 60), ("roastedchicken", 60),
+            
+            # Luxury Item (70 coins)
+            ("steak", 70)
         ]
         
         # Find matching item and return its price
