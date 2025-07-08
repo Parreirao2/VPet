@@ -266,7 +266,3 @@ This application is built with:
 - `context_awareness.py`: Monitors active applications and triggers pet responses, enabling the pet to react to your computer usage.
 - `frames/`: Animation frame images for different pet stages and colors
 - `img_assets/`: Food, item, and currency images
-
-## 🤫 Cheat Codes
-
-- **Unlock 10,000,000 coins**: Change your pet's name to `UUDDLRLRBA` in the settings to activate the cheat.
