@@ -176,15 +176,26 @@ Ollama              # Local AI models
 ### **Project Structure**
 ```
 VPet/
-├── 📁 frames/           # Pet animations & sprites
-├── 📁 img_assets/       # Food, items, UI graphics
-├── 🐍 main.py          # Application entry point
-├── 🧠 ai_chat_system.py # AI chat with Gemini & Ollama
-├── 🎮 game_hub.py      # Mini-games & currency
-├── 💾 pet_components.py # Core pet logic & stats
-├── 🎬 pet_animation.py # Animation & movement
-├── 🛒 inventory_system.py # Shop & items
-└── 💰 currency_system.py # Economy management
+├── 📁 frames/               # Pet animations & sprites
+├── 📁 img_assets/           # Food, items, UI graphics
+├── 🐍 main.py              # Application entry point
+├── 🧠 ai_chat_system.py    # AI chat with Gemini & Ollama
+├── 🎮 game_hub.py          # Mini-games & currency
+├── 💾 pet_components.py    # Core pet logic & stats
+├── 🎬 pet_animation.py     # Animation & movement
+├── 🛒 inventory_system.py  # Shop & items
+├── 💰 currency_system.py   # Economy management
+├── 🧹 poop_system.py       # Waste management & cleaning
+├── 💬 speech_bubble.py     # Pet communication system
+├── 🖥️ system_tray.py      # System tray integration
+├── ⚙️ unified_ui.py        # Modern UI components & settings
+├── 🎨 ui_components.py     # UI utilities & helpers
+├── 🚀 startup_manager.py   # Windows startup integration
+├── 🏗️ build_exe.py        # Executable builder
+├── 📋 build_vpet.spec     # PyInstaller specification
+├── 📝 requirements.txt    # Python dependencies
+├── 📄 LICENSE             # MIT License
+└── 📖 README.md           # This file
 ```
 
 ---
