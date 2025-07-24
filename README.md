@@ -1,268 +1,236 @@
-# 🐾 Virtual Pet (VPet) Desktop Application 🐾
+<div align="center">
 
-A modern desktop Tamagotchi-style virtual pet that lives on your computer screen. Take care of your pet as it grows from a baby to an adult through various life stages! Feed it, play with it, chat with it using AI, and watch it thrive in this delightful virtual companion experience.
+# 🐾 **Virtual Pet (VPet)** 
+### *Your AI-Powered Desktop Companion*
 
-## 🎭 Pet Evolution Stages
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+[![AI](https://img.shields.io/badge/AI-Gemini%20%7C%20Ollama-purple.svg)](#-ai-chat-system)
 
-(Baby)
-<img src="frames/Baby_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+</div>
 
-(Child)
-<img src="frames/Child_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
+---
 
-(Teen)
-<img src="frames/Teen_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
-
-(Adult)
-<img src="frames/Adult_Happy.png" alt="Virtual Pet Screenshot" width="45"/>
-
-(Special)
-???HIDDEN???
-
-## 🖥️ Demo
-
-![Virtual Pet Demo](img_assets/VPet_Demo.apng)
-
-
-
-## ✨ Features
-
-### 🌱 Pet Life Cycle & Evolution
-- **Growth Stages**: Your pet evolves through 5 distinct life stages - Baby, Child, Teen, Adult, and Special
-- **Natural Evolution**: Pet ages over time and evolves automatically when reaching age thresholds:
-  - Baby → Child: 30 days
-  - Child → Teen: 60 days  
-  - Teen → Adult: 90 days
-- **Instant Evolution Items**: Use special Evo1 items to evolve your pet to the next stage immediately
-- **Special Evolution**: Use Evo2 items to unlock the secret "Special" stage with unique animations
-- **Stage-Based Personalities**: Each life stage has distinct personality traits and behaviors
-- **Customizable Appearance**: Choose from different pet colors (black, blue, pink)
-
-### 📊 Comprehensive Stats System
-- **Hunger** (0-100%): Feed your pet to keep it satisfied - affects health when too low
-- **Happiness** (0-100%): Play with your pet to keep it joyful - influences mood and behavior
-- **Energy** (0-100%): Let your pet rest to maintain energy - depletes with activities
-- **Health** (0-100%): Maintain through balanced care - decreases when other stats are critical
-- **Cleanliness** (0-100%): Clean up after your pet to maintain hygiene - affected by waste
-- **Social** (0-100%): Interact with your pet to fulfill social needs - improved through attention
-- **Dynamic Decay**: Stats decrease over time at different rates based on pet's life stage
-- **Status Effects**: Visual indicators when stats are low (hungry, tired, sick, sad, dirty, lonely)
-
-### 🎮 Interactive Gameplay
-- **Advanced Feeding System**: 80+ different food items with unique stat effects
-- **Natural Behaviors**: Pet exhibits realistic animal behaviors including random napping and natural waste patterns
-- **Double-Click Interaction**: Double-click your pet for happiness boosts (with cooldown)
-- **Drag & Drop**: Move your pet around your screen freely
-- **Rich Animation System**: Multiple animations for different pet states, moods, and activities
-- **Smart Speech Bubbles**: Adaptive communication system with intelligent positioning and directional tails
-- **Sickness System**: Pet becomes sick when stats are too low, requiring proper care
-
-### 🧠 Enhanced Natural Behaviors
-- **Random Sleep System**: Pet takes realistic naps like a real animal (25% base chance when idle, increasing to 60% if pet hasn't slept recently)
-- **Natural Pooping System**: Realistic waste management that increases over time and after eating, with proper cooldown periods after pooping
-- **Smooth Animations**: Natural movement speed with proper direction-aware sprite flipping for realistic motion
-
-### 🤖 AI Chat System
-- **Intelligent Conversations**: Chat with your pet using Google Gemini AI models
-- **Multiple AI Models**: Choose from 7 different Gemini models (free and paid options):
-  - **FREE**: Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 1.5 Flash
-  - **PAID**: Gemini 2.0 Pro, Gemini 2.0 Flash, Gemini 2.0 Flash-Lite, Gemini 1.5 Pro
-- **Personality-Aware**: AI responses adapt to your pet's current stage, stats, and mood
-- **Typewriter Effect**: Responses appear with realistic typing animation
-- **Friendly Error Handling**: User-friendly error messages for API issues
-- **Secure Storage**: API keys stored locally and securely
-
-### 🧠 Context Awareness
-- **Application Monitoring**: The pet actively monitors the applications you are using and can comment on them, bringing a new level of interaction.
-- **Intelligent Movement**: VPet is aware of your workspace and will intelligently move away from active application windows to avoid obstructing your view.
-- **Smart Responses**: The AI can provide context-aware responses based on the detected application, with a memory system to provide relevant follow-up comments.
-- **Frequency Control**: To avoid being intrusive, the pet uses smart frequency control to limit how often it comments on your applications.
-
-### 💰 Currency & Game Hub
-- **Coin Economy**: Earn coins through gameplay and pet care activities
-- **Three Exciting Mini-Games**:
+<div align="center">
   
-  **🎲 Number Guesser**:
-  - Guess numbers within increasing ranges
-  - Progressive difficulty with each level
-  - Rewards: 1-7+ coins based on level batches
-  - Limited guesses with strategic gameplay
-  
-  **⚡ Reaction Test**:
-  - Test your reflexes against decreasing time limits
-  - Goal times get faster as you level up (3.0s down to 0.3s)
-  - Rewards: 1-7+ coins for successful reactions
-  - Performance-based feedback system
-  
-  **🎯 Ball Clicker**:
-  - Click black balls while avoiding red ones
-  - Dynamic ball spawning with increasing difficulty
-  - Timed rounds with click requirements
-  - Rewards: 1-7+ coins for completing levels
+![VPet Banner](img_assets/VPet_Demo.apng)
 
-- **Progressive Rewards**: Higher levels in each game provide better coin rewards
-- **Energy Cost**: Playing games consumes your pet's energy, adding strategic depth
+</div>
 
-### 🛒 Comprehensive Inventory & Shop
-- **80+ Food Items**: Extensive variety with different effects and prices (15-70 coins)
-- **Care Items**: 
-  - Toilet Paper (Free) - Cleans poop, +15% cleanliness
-  - Shower (Free) - +15% cleanliness boost
-- **Evolution Items**:
-  - Evo1 (10,000 coins) - Evolve to next stage
-  - Evo2 (1,000,000 coins) - Evolve to special stage
-- **Smart Shopping**: Items sorted by price for easy browsing
-- **Detailed Tooltips**: Hover over items to see effects and prices
-- **Quantity Management**: Track owned items with quantity displays
+## 🌟 **Overview**
 
-### 💻 Desktop Integration
-- **Always On Top**: Pet stays visible on your desktop (toggleable)
-- **System Tray**: Complete control panel accessible from system tray
-- **Transparent Background**: Pet integrates seamlessly with your desktop
-- **Auto-Save**: Pet data automatically saved every 5 minutes
-- **Startup Integration**: Option to start with Windows
-- **Multi-Monitor Support**: Pet can move across multiple screens
+**VPet** is a revolutionary desktop virtual pet that combines classic Tamagotchi gameplay with cutting-edge AI technology. Your pet evolves through life stages, learns from interactions, and even chats with you using advanced AI models like **Google Gemini** and **Ollama**. It's not just a pet—it's your intelligent desktop companion.
 
-## 🚀 Getting Started
+---
 
-### 📥 Installation
+## 🎭 **Pet Evolution Journey**
 
-1. Ensure you have Python 3.8+ installed on your system
-2. Clone this repository or download the source code
-3. Install required dependencies:
-   ```
-   pip install pillow tkinter pystray google-generativeai
-   ```
-4. Run the application:
-   ```
-   python main.py
-   ```
+<div align="center">
 
-### 🎮 Basic Controls
+| **Baby** | **Child** | **Teen** | **Adult** | **Special** |
+|:--------:|:---------:|:--------:|:---------:|:-----------:|
+| ![Baby](frames/Baby_Happy.png) | ![Child](frames/Child_Happy.png) | ![Teen](frames/Teen_Happy.png) | ![Adult](frames/Adult_Happy.png) | ??? |
+| *Day 1-30* | *Day 31-60* | *Day 61-90* | *Day 91+* | *Secret* |
 
-- **Left-click**: Select your pet
-- **Double-click**: Give your pet a happiness boost (has cooldown)
-- **Right-click**: Open the context menu to see your pet's stats at a glance
-- **Drag**: Move your pet around the screen
+</div>
 
-## 💕 Caring For Your Pet
+---
 
-### 🍔 Feeding Your Pet
+## ✨ **Core Features**
 
-Access the inventory through the right-click menu to feed your pet from 80+ different food items including:
+### 🤖 **AI Chat System** *(NEW: Ollama Support!)*
+- **🧠 Multiple AI Models**: 
+  - **Google Gemini** (7 models: Pro, Flash, Lite)
+  - **🆕 Ollama** (Local AI - no internet required!)
+- **🎯 Context-Aware**: Pet knows your apps and responds intelligently
+- **💬 Natural Conversations**: Typewriter-style responses with personality
+- **🔒 Privacy-First**: Local Ollama models keep your data private
+- **🎭 Personality-Driven**: Responses adapt to your pet's mood and life stage
 
-- **🥖 Bakery Items**: Bread, buns, baguettes, bagels (15-35 coins)
-- **🍰 Desserts & Sweets**: Chocolate, cakes, cookies, pies (20-60 coins)  
-- **🍖 Main Dishes**: Steak, salmon, burgers, pizza (30-70 coins)
-- **🍜 International Cuisine**: Ramen, spaghetti, curry, sushi (35-50 coins)
-- **🥞 Breakfast Items**: Pancakes, waffles, eggs, bacon (20-40 coins)
-- **🍿 Snacks & Sides**: Fries, popcorn, chips, ice cream (20-45 coins)
-- **🥗 Healthy Options**: Salads, fruits, vegetables (15-40 coins)
-- **🥤 Beverages**: Water, juices, sodas, coffee (10-30 coins)
+### 🎮 **Interactive Gameplay**
+- **📊 6 Core Stats**: Hunger, Happiness, Energy, Health, Cleanliness, Social
+- **🍔 80+ Food Items**: From bread to sushi, each with unique effects
+- **🎲 3 Mini-Games**: Number Guesser, Reaction Test, Ball Clicker
+- **💰 Economy System**: Earn coins through games and care activities
+- **🧹 Realistic Care**: Clean up after your pet, manage hygiene
 
-Each food item has unique effects on your pet's stats - some boost happiness and energy while others may affect health or cleanliness. Choose wisely based on your pet's current needs!
-- **Egg Salad Bowl** (40 coins): Hunger +3, Happiness +1, Energy +2, Health +2, Cleanliness -1
-- **Egg Tart** (25 coins): Hunger +2, Happiness +3, Energy +1, Cleanliness -1
+### 🏆 **Advanced Features**
+- **👁️ Context Awareness**: Pet monitors your apps and comments intelligently
+- **🎨 Customization**: Colors, sizes, transparency, behavior settings
+- **💾 Auto-Save**: Never lose progress with 5-minute auto-saves
+- **🖥️ Desktop Integration**: Always-on-top, multi-monitor support
+- **🔄 Smart Evolution**: Natural aging or instant evolution items
 
-## 🎮 Game Hub & Mini-Games
+---
 
-### 🎲 Number Guesser
-- **Objective**: Guess the correct number within an increasing range
-- **Mechanics**: Start with 1-10, range expands as you level up
-- **Lives**: 3+ guesses per level (increases every 5 levels)
-- **Rewards**: 1-7+ coins based on level batches
-- **Strategy**: Higher levels = bigger ranges but better rewards
+## 🚀 **Quick Start**
 
-### ⚡ Reaction Test  
-- **Objective**: Click the button as fast as possible when it turns red
-- **Mechanics**: Wait times are random (1-3 seconds)
-- **Goal Times**: Start at 3.0s, decrease to 0.3s minimum as you level up
-- **Rewards**: 1-7+ coins for meeting time goals
-- **Penalty**: Level decreases if you're too slow
+### 📥 **Installation**
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/VPet.git
+cd VPet
 
-### 🎯 Ball Clicker
-- **Objective**: Click required number of black balls while avoiding red ones
-- **Mechanics**: Balls spawn randomly, red balls reduce score
-- **Requirements**: 5+ black balls per level (increases with level)
-- **Time Limit**: 8-15 seconds depending on level
-- **Rewards**: 1-7+ coins for completing levels
+# 2. Install dependencies
+pip install -r requirements.txt
 
-### 🧹 Cleaning & Hygiene
+# 3. Run VPet
+python main.py
+```
 
-Your pet creates waste that affects cleanliness:
+### 🔑 **AI Setup**
 
-1. **Automatic Waste Generation**: Pet creates poop based on poop frequency setting
-2. **Cleaning Tools**: Use toilet paper (free) or shower (free) from inventory
-3. **Cleanliness Impact**: Uncleaned waste reduces cleanliness over time
-4. **Health Connection**: Low cleanliness contributes to sickness
+#### **Option 1: Google Gemini** *(Cloud)*
+1. Get your free API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Enter key in VPet settings
+3. Choose from 7 Gemini models
 
-### 🏥 Health & Sickness System
+#### **Option 2: Ollama** *(Local - NEW!)*
+1. Install [Ollama](https://ollama.ai) on your system
+2. Download a model: `ollama pull llama2` or `ollama pull mistral`
+3. Select "Ollama" in VPet AI settings
+4. **Zero configuration needed** - works offline!
 
-- **Sickness Triggers**: Any stat below 25% can cause sickness
-- **Health Decay**: Sick pets lose health over time (faster with multiple low stats)
-- **Visual Indicators**: Sickness overlay appears on sick pets
-- **Recovery**: Restore all stats above 25% to cure sickness
-- **Prevention**: Maintain balanced stats through regular care
+---
 
-### 🔄 Evolution System
+## 🎮 **How to Play**
 
-#### Natural Evolution (Age-Based)
-- **Baby → Child**: 30 days old
-- **Child → Teen**: 60 days old  
-- **Teen → Adult**: 90 days old
+### **Basic Controls**
+| **Action** | **Result** |
+|------------|------------|
+| **Left Click** | Select pet |
+| **Double Click** | Happiness boost (+10%) |
+| **Right Click** | Open context menu |
+| **Drag** | Move pet anywhere |
 
-#### Instant Evolution Items
-- **Evo1 Item** (10,000 coins): Evolve to next natural stage immediately
-- **Evo2 Item** (1,000,000 coins): Evolve to secret "Special" stage
+### **Daily Care Routine**
+1. **🍽️ Feed** your pet when hungry
+2. **🎮 Play** mini-games for coins and happiness
+3. **🧹 Clean** up waste to maintain hygiene
+4. **💬 Chat** with AI for social interaction
+5. **😴 Let rest** when energy is low
 
-### 🤖 AI Chat Features
+---
 
-- **Setup**: Requires Google Gemini API key (free tier available)
-- **Model Selection**: Choose from 7 different AI models
-- **Personality**: AI adapts responses to pet's current stage and stats
-- **Context Awareness**: AI knows about all game features and can provide guidance
-- **Error Handling**: Friendly messages for API issues or credit problems
+## 🛒 **Shop & Items**
 
-> **Note**: Your API key is stored locally in the `saves` directory. Do not share this folder with anyone to protect your key.
+### **Food Categories**
+| **Category** | **Price Range** | **Best For** |
+|:-------------|:----------------|:-------------|
+| **🥖 Bakery** | 15-35 coins | Quick hunger fix |
+| **🍰 Desserts** | 20-60 coins | Happiness boost |
+| **🍖 Main Dishes** | 30-70 coins | Full meals |
+| **🍜 International** | 35-50 coins | Balanced stats |
 
-## 🎨 Customization
+### **Special Items**
+- **🧻 Toilet Paper**: Clean waste (FREE)
+- **🚿 Shower**: +15% cleanliness (FREE)
+- **🧬 Evo1**: Instant evolution (10,000 coins)
+- **✨ Evo2**: Secret special form (1,000,000 coins)
 
-Access settings through the system tray icon to customize:
+---
 
-- Pet name
-- Pet size
-- Transparency
-- Movement speed
-- Activity level
-- Pet color (black, blue, pink)
-- Poop frequency
+## 🎯 **Mini-Games**
 
-## 💾 Saving and Loading
+<div align="center">
 
-- Your pet's state is automatically saved every 5 minutes
-- Save files are stored in the `saves` directory
-- You can manually save through the system tray menu
+| **Game** | **Skill** | **Reward** | **Max Coins** |
+|:---------|:----------|:-----------|:--------------|
+| **🎲 Number Guesser** | Logic | 1-7+ coins | 7+ per level |
+| **⚡ Reaction Test** | Speed | 1-7+ coins | 7+ per level |
+| **🎯 Ball Clicker** | Precision | 1-7+ coins | 7+ per level |
 
-## 🔧 Technical Details
+</div>
 
-This application is built with:
+---
 
-- Python 3.8+
-- Tkinter for the GUI
-- PIL (Pillow) for image processing
-- Pystray for system tray integration
+## 🎨 **Customization Options**
 
-## 📁 Project Structure
+### **Visual Settings**
+- **🎨 Colors**: Black, Blue, Pink
+- **📏 Sizes**: Tiny to Large
+- **👻 Transparency**: 10% to 100%
+- **🎭 Personality**: Active, Calm, Playful
 
-- `main.py`: Main application entry point
-- `pet_components.py`: Core pet stats and growth systems
-- `pet_animation.py`: Pet animation and movement logic
-- `poop_system.py`: Waste generation and cleaning mechanics
-- `inventory_system.py`: Item management and usage
-- `currency_system.py`: Virtual currency management for in-game economy
-- `game_hub.py`: Mini-games implementation including Number Guesser and Reaction Test
-- `speech_bubble.py`: Pet communication system
-- `system_tray.py`: System tray integration and menu controls
-- `context_awareness.py`: Monitors active applications and triggers pet responses, enabling the pet to react to your computer usage.
-- `frames/`: Animation frame images for different pet stages and colors
-- `img_assets/`: Food, item, and currency images
+### **Behavior Settings**
+- **⚡ Speed**: Slow to Fast movement
+- **💩 Poop Frequency**: Rare to Frequent
+- **💬 Chat Frequency**: Minimal to Chatty
+- **🔄 Auto-Start**: Launch with Windows
+
+---
+
+## 🏗️ **Technical Architecture**
+
+### **Core Technologies**
+```python
+Python 3.8+          # Core language
+Tkinter             # GUI framework
+Pillow (PIL)        # Image processing
+Pystray             # System tray integration
+Google GenerativeAI # Gemini API
+Ollama              # Local AI models
+```
+
+### **Project Structure**
+```
+VPet/
+├── 📁 frames/           # Pet animations & sprites
+├── 📁 img_assets/       # Food, items, UI graphics
+├── 🐍 main.py          # Application entry point
+├── 🧠 ai_chat_system.py # AI chat with Gemini & Ollama
+├── 🎮 game_hub.py      # Mini-games & currency
+├── 💾 pet_components.py # Core pet logic & stats
+├── 🎬 pet_animation.py # Animation & movement
+├── 🛒 inventory_system.py # Shop & items
+└── 💰 currency_system.py # Economy management
+```
+
+---
+
+## 🤝 **Contributing**
+
+We welcome contributions! Here's how you can help:
+
+### **🐛 Bug Reports**
+- Check existing [issues](https://github.com/yourusername/VPet/issues)
+- Include steps to reproduce
+- Add screenshots if possible
+
+### **✨ Feature Requests**
+- Open a new [issue](https://github.com/yourusername/VPet/issues)
+- Describe the feature and its benefits
+- Check if similar requests exist
+
+### **🔧 Development**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+---
+
+## 📄 **License**
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 **Acknowledgments**
+
+- **Google AI Studio** for Gemini API
+- **Ollama Team** for local AI capabilities
+- **Python Community** for amazing libraries
+- **Tamagotchi** for the original inspiration
+
+---
+
+<div align="center">
+
+### ⭐ **Star this repo if you love VPet!** ⭐
+
+**Made with ❤️ by the VPet Community**
+
+</div>
