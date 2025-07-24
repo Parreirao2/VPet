@@ -6,7 +6,7 @@ import os
 import math
 import shutil
 from datetime import datetime
-from unified_ui import CombinedPanel, SpeechBubble, SimpleStatusPanel
+from unified_ui import SimpleStatusPanel
 import pystray
 import random
 import threading
@@ -18,7 +18,6 @@ from poop_system import PoopSystem
 from inventory_system import InventorySystem
 from pet_animation import PetAnimation
 from pet_components import PetStats, PetGrowth
-from context_awareness import ContextAwareness
 
 
 class PetState:
@@ -30,6 +29,8 @@ class PetState:
         self.current_animation = 'Standing'
         self.direction = 'left'
         self.is_interacting = False
+        self.is_sleeping = False
+        self.sleep_start_time = None
         self.currency = 100
         self.game_progress = {
             'number_guesser': 1,
@@ -46,11 +47,13 @@ class VirtualPet:
     def __init__(self, root):
         self.root = root
         self.root.overrideredirect(True)
+        self.root.geometry("256x256+300+300")
         self.root.attributes('-topmost', True)
         self.save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
         os.makedirs(self.save_path, exist_ok=True)
         self.last_save = None
         self._name = "My Pet" # Use _name for internal storage
+        self.running = True # Add a running flag
         
         self.settings = {
             'always_on_top': True,
@@ -78,9 +81,12 @@ class VirtualPet:
         
         self.animation = PetAnimation(root, self.canvas, self.pet_state, self.settings)
 
-        self.combined_panel = CombinedPanel(root, self, self.canvas)
         self.speech_bubble = SpeechBubble(self.canvas, self.root)
         self.status_panel = SimpleStatusPanel(root, self)
+        
+        # Initialize sleep timer variables
+        self.sleep_timer_label = None
+        self.sleep_timer_update_id = None
         
         print("Initializing poop system...")
         self.poop_system = PoopSystem(self.root, self.canvas, self.pet_state)
@@ -92,9 +98,6 @@ class VirtualPet:
         # Try to load existing save file on startup - moved here
         self.auto_load_pet()
         
-        self.context_awareness = ContextAwareness(self)
-        
-        self.pet_state.context_awareness = self.context_awareness
         
         self.last_click_time = 0
         self.last_happiness_boost_time = 0
@@ -108,6 +111,7 @@ class VirtualPet:
         self.canvas.bind('<Button-3>', self.handle_right_click)
         self.canvas.bind('<B1-Motion>', self.handle_drag)
         self.canvas.bind('<ButtonRelease-1>', self.handle_drag_end)
+        self.canvas.bind('<Double-Button-1>', self.handle_double_click)
         
         self.update_state()
         
@@ -133,12 +137,25 @@ class VirtualPet:
         self._name = new_name
         self.check_for_cheat_code()
     
-    
-    
-    
-    
     def update_state(self):
         self.pet_state.stats.update()
+        
+        # Handle sleep state and energy recovery - Only trigger auto-sleep below 15%
+        energy = self.pet_state.stats.get_stat('energy')
+        # Only auto-sleep if energy is strictly below 15% (not equal to 15%)
+        if energy < 15:  # Changed from <= to < to ensure it's strictly below 15%
+            if not self.pet_state.is_sleeping:
+                self.pet_state.is_sleeping = True
+                self.pet_state.sleep_start_time = datetime.now()
+                # Calculate sleep duration to reach 100% energy
+                energy_needed = 100 - energy
+                # Recovery rate: 1 energy per 5 seconds = 12 per minute
+                sleep_duration_minutes = energy_needed / 12
+                self.pet_state.sleep_duration = int(sleep_duration_minutes * 60 * 1000)  # Convert to milliseconds
+                self.pet_state.current_animation = 'sleeping'
+        
+        # Remove the manual energy recovery here since it's now handled in PetStats.update()
+        # The old code was recovering energy every update cycle regardless of the actual sleep state
         
         self.check_sickness_status()
         
@@ -154,8 +171,6 @@ class VirtualPet:
                 self.root.winfo_y() + self.canvas.winfo_height() // 2
             )
         
-        if hasattr(self, 'context_awareness'):
-            self.context_awareness.update_context_awareness()
         
         if hasattr(self, 'icon'):
             if hasattr(self.icon, 'update_icon_menu'):
@@ -185,9 +200,18 @@ class VirtualPet:
         if is_sick != self.pet_state.stats.is_sick:
             self.pet_state.stats.is_sick = is_sick
             
-            if is_sick:
-                self.animation.show_sickness_overlay()
-            else:
+            # Never show sickness overlay during sleep
+            if not self.pet_state.is_sleeping:
+                if is_sick:
+                    self.animation.show_sickness_overlay()
+                else:
+                    self.animation.hide_sickness_overlay()
+                    
+        # Ensure sleep animation takes priority over sickness and other states
+        if self.pet_state.is_sleeping:
+            self.pet_state.current_animation = 'sleeping'
+            # Hide sickness overlay during sleep
+            if hasattr(self.animation, 'hide_sickness_overlay'):
                 self.animation.hide_sickness_overlay()
     
     def check_evolution(self):
@@ -202,6 +226,11 @@ class VirtualPet:
     def evolve_to(self, new_stage):
         if new_stage == "Special" or self.pet_state.stage != new_stage:
             if hasattr(self.pet_state, 'growth') and hasattr(self.pet_state.growth, 'evolve_to'):
+                # Reset sleep state if evolving while sleeping
+                if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
+                    self.pet_state.is_sleeping = False
+                    self.pet_state.sleep_start_time = None
+                    
                 success = self.pet_state.growth.evolve_to(new_stage)
                 if success:
                     # Ensure movement resumes after evolution
@@ -236,8 +265,27 @@ class VirtualPet:
                 self.animation_reset_timer = self.root.after(2000, self.reset_animation_state)
         
         self.last_click_time = current_time
+
+    def handle_double_click(self, event):
+        """Handle double-click to wake up sleeping pet"""
+        if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
+            # Calculate distance from pet center
+            pet_x = self.canvas.winfo_width() // 2
+            pet_y = self.canvas.winfo_height() // 2
+            distance = ((event.x - pet_x) ** 2 + (event.y - pet_y) ** 2) ** 0.5
+            
+            if distance < 50:  # Click within pet area
+                if hasattr(self, 'inventory_system'):
+                    self.inventory_system.wake_up_pet()
+                    # Reset sleep state after waking up
+                    self.pet_state.is_sleeping = False
+                    self.pet_state.sleep_start_time = None
+                    print("[DEBUG] Sleep state reset after double-click wake up")
         
     def reset_animation_state(self):
+        if getattr(self.pet_state, 'is_sleeping', False):
+            return
+            
         if hasattr(self, 'pet_state') and self.pet_state.current_animation == 'happy':
             self.pet_state.current_animation = 'Standing'
             self.pet_state.is_interacting = False
@@ -306,7 +354,7 @@ class VirtualPet:
         if self.pet_state.stats.get_stat('social') <= 30:
             status_effects.append('lonely')
         
-        return {
+        summary = {
             'name': self.name,
             'stage': self.pet_state.stage,
             'age': round(self.pet_state.stats.get_stat('age'), 1),
@@ -318,6 +366,16 @@ class VirtualPet:
             'social': self.pet_state.stats.get_stat('social'),
             'status_effects': status_effects
         }
+        
+        # Add sleep timer if pet is sleeping
+        if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping and self.pet_state.sleep_start_time is not None:
+            elapsed = datetime.now().timestamp() - self.pet_state.sleep_start_time.timestamp()
+            minutes = int(elapsed // 60)
+            seconds = int(elapsed % 60)
+            summary['sleep_timer'] = f"{minutes:02d}:{seconds:02d}"
+            print(f"[TIMER] Added sleep timer to summary: {summary['sleep_timer']}")
+            
+        return summary
         
     def save_pet(self, is_autosave=False):
         save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
@@ -452,6 +510,15 @@ class VirtualPet:
             if 'game_progress' in save_data:
                 self.pet_state.game_progress = save_data['game_progress']
             
+            # Reset sleep state when loading to prevent inconsistent states
+            if hasattr(self.pet_state, 'is_sleeping'):
+                self.pet_state.is_sleeping = False
+            if 'sleep_start_time' in save_data and save_data['sleep_start_time']:
+                self.pet_state.sleep_start_time = datetime.fromisoformat(save_data['sleep_start_time'])
+            else:
+                self.pet_state.sleep_start_time = None
+            print("[LOAD] Sleep state reset after loading")
+            
             # self.pet_state.current_animation = 'special' # Removed hardcoded animation
             
             self.last_save = os.path.basename(filepath)
@@ -485,6 +552,10 @@ class VirtualPet:
             
             if hasattr(self, 'poop_system'):
                 self.poop_system.add_food_consumed(1)
+            
+            # Give eating animation more time to display (5 seconds instead of 3)
+            self.schedule_resume_movement(5000)
+            return result
         elif interaction_type == 'play':
             self.pet_state.current_animation = 'playing'
             self.pet_state.stats.modify_stat('happiness', 15)
@@ -511,13 +582,26 @@ class VirtualPet:
             result['message'] = 'Your pet enjoyed the attention!'
             result['stat_changes'].update({'happiness': 10, 'social': 15})
             self.speech_bubble.show_bubble('pet')
+        elif interaction_type == 'clean':
+            self.pet_state.current_animation = 'happy'
+            self.pet_state.stats.modify_stat('cleanliness', 15)
+            self.pet_state.stats.modify_stat('happiness', 5)
+            result['message'] = 'Your pet feels fresh and clean!'
+            result['stat_changes'].update({'cleanliness': 15, 'happiness': 5})
+            self.speech_bubble.show_bubble('clean')
         elif interaction_type == 'sleep':
-            self.pet_state.current_animation = 'sleeping'
-            self.pet_state.stats.modify_stat('energy', 30)
-            result['message'] = 'Your pet is sleeping peacefully.'
-            result['stat_changes']['energy'] = 30
-            self.speech_bubble.show_bubble('sleep')
-            
+            if not self.pet_state.is_sleeping:
+                self.pet_state.current_animation = 'sleeping'
+                self.pet_state.is_sleeping = True
+                self.pet_state.sleep_start_time = datetime.now()
+                
+                energy_needed = 100 - self.pet_state.stats.get_stat('energy')
+                sleep_duration_minutes = max(0.1, energy_needed / 12)  # At least 6 seconds
+                self.pet_state.sleep_duration = int(sleep_duration_minutes * 60 * 1000)
+                
+                result['message'] = 'Your pet is now sleeping to recover energy!'
+                self.speech_bubble.show_bubble('sleep')
+                return result
         self.schedule_resume_movement(3000)
         
         return result
@@ -542,26 +626,87 @@ class VirtualPet:
         x = self.root.winfo_x() + event.x
         y = self.root.winfo_y() + event.y
         
-        try:
-            self.status_panel.show_panel(x, y, on_close_callback=self.on_stats_panel_closed)
-        except TypeError:
-            self.status_panel.show_panel(x, y)
-            self.schedule_resume_movement(5000)
+        print(f"DEBUG: Right click at event.x={event.x}, event.y={event.y}")
+        print(f"DEBUG: Pet window position: x={self.root.winfo_x()}, y={self.root.winfo_y()}")
+        print(f"DEBUG: Calculated panel position: x={x}, y={y}")
+        
+        self.status_panel.show_panel(x, y)
+        self.schedule_resume_movement(5000)
+            
+        # Start updating the sleep timer display after showing panel
+        self.root.after(100, self.update_sleep_timer_display)
     
     def on_stats_panel_closed(self):
         self.schedule_resume_movement(200)
-    
-    def show_inventory(self):
-        self.inventory_system.show_inventory()
+        # Cancel any running sleep timer updates
+        if self.sleep_timer_update_id:
+            self.root.after_cancel(self.sleep_timer_update_id)
+            self.sleep_timer_update_id = None
         
-    def show_game_hub(self):
+        # Remove sleep timer label if exists
+        if self.sleep_timer_label:
+            self.sleep_timer_label.destroy()
+            self.sleep_timer_label = None
+        print("[DEBUG] Status panel closed - timer updates stopped")
+    
+    def show_inventory(self, parent_window=None):
+        print(f"[DEBUG] pet_manager.show_inventory: parent_window={'valid' if parent_window else 'None'}")
+        self.inventory_system.show_inventory(parent_window=parent_window)
+        
+    def update_sleep_timer_display(self):
+        """Update the sleep timer in the status panel to show remaining time"""
+        if not self.status_panel or not self.status_panel.panel_window or not self.status_panel.panel_window.winfo_exists():
+            return
+            
+        if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
+            # Ensure sleep_start_time is set
+            if self.pet_state.sleep_start_time is None:
+                self.pet_state.sleep_start_time = datetime.now()
+                
+            # Ensure sleep_duration is set
+            if not hasattr(self.pet_state, 'sleep_duration') or self.pet_state.sleep_duration is None:
+                self.pet_state.sleep_duration = 180000  # 3 minutes default
+                
+            # Calculate remaining time
+            sleep_duration_sec = self.pet_state.sleep_duration / 1000
+            elapsed = datetime.now().timestamp() - self.pet_state.sleep_start_time.timestamp()
+            remaining = max(0, sleep_duration_sec - elapsed)
+            minutes = int(remaining // 60)
+            seconds = int(remaining % 60)
+            timer_text = f"Sleeping: {minutes:02d}:{seconds:02d} left"
+            
+            if not self.sleep_timer_label:
+                # Add to panel header area
+                self.sleep_timer_label = tk.Label(self.status_panel.panel_window,
+                                                text=timer_text,
+                                                font=("Arial", 12, "bold"),
+                                                fg="white",
+                                                bg="#4a86e8",
+                                                padx=10,
+                                                pady=5)
+                self.sleep_timer_label.pack(side="top", fill=tk.X, pady=(0, 10))
+            else:
+                if self.sleep_timer_label.winfo_exists():
+                    self.sleep_timer_label.config(text=timer_text)
+                else:
+                    self.sleep_timer_label = None
+                
+            # Schedule next update
+            self.sleep_timer_update_id = self.root.after(1000, self.update_sleep_timer_display)
+        elif self.sleep_timer_label:
+            # Remove timer if pet is awake
+            self.sleep_timer_label.destroy()
+            self.sleep_timer_label = None
+        
+    def show_game_hub(self, parent_window=None):
+        print(f"[DEBUG] pet_manager.show_game_hub: parent_window={'valid' if parent_window else 'None'}")
         from game_hub import GameHub
         from currency_system import CurrencySystem
         
         if not hasattr(self, 'currency_system'):
             self.currency_system = CurrencySystem(self.pet_state)
         
-        game_hub = GameHub(self.root, self.currency_system, self.pet_state)
+        game_hub = GameHub(self.root, self.currency_system, self.pet_state, parent_window=parent_window)
     
     def handle_drag(self, event):
         self.pause_movement()
@@ -599,9 +744,9 @@ class VirtualPet:
         except Exception as e:
             pass
         
-        tray_thread = threading.Thread(target=self.icon.run, daemon=True)
-        tray_thread.name = "SystemTrayThread"
-        tray_thread.start()
+        self.tray_thread = threading.Thread(target=self.icon.run, daemon=True)
+        self.tray_thread.name = "SystemTrayThread"
+        self.tray_thread.start()
         
         time.sleep(0.5)
     
@@ -655,6 +800,8 @@ class VirtualPet:
             
         if hasattr(self, 'icon') and self.icon:
             self.icon.stop()
+        
+        self.running = False # Set the running flag to False
         self.root.quit()
         
     def update_setting(self, setting_name, value):
@@ -672,9 +819,6 @@ class VirtualPet:
                 self.animation.handle_color_change(old_value, value)
             else:
                 self.handle_color_change(old_value, value)
-        elif setting_name == 'context_awareness_enabled':
-            if hasattr(self, 'context_awareness'):
-                self.context_awareness.toggle_monitoring(value)
         
         self.save_settings()
         
@@ -717,6 +861,9 @@ class VirtualPet:
                 pet, error = self.load_pet(standard_save)
                 if pet:
                     print("Pet loaded successfully!")
+                    # Debug: Check sleep state after load
+                    if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
+                        print(f"[LOAD] Loaded sleep state: is_sleeping={self.pet_state.is_sleeping}, sleep_start_time={self.pet_state.sleep_start_time}")
                     return True
                 else:
                     print(f"Failed to load pet: {error}")
@@ -744,6 +891,9 @@ class VirtualPet:
                     pet, error = self.load_pet(most_recent)
                     if pet:
                         print("Pet loaded successfully!")
+                        # Debug: Check sleep state after load
+                        if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
+                            print(f"[LOAD] Loaded sleep state: is_sleeping={self.pet_state.is_sleeping}, sleep_start_time={self.pet_state.sleep_start_time}")
                         return True
                     else:
                         print(f"Failed to load pet: {error}")
@@ -772,13 +922,12 @@ class VirtualPet:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("Virtual Pet")
-    
-    from unified_ui import SimpleUI
-    simple_ui = SimpleUI(root)
-    
     pet = VirtualPet(root)
     
+    # Set up the close protocol
     root.protocol("WM_DELETE_WINDOW", pet.exit_app)
     
+    # Start the main GUI loop
     root.mainloop()
+# Diagnostic logging for sleep timer visibility
+# Removed debug statement that caused NameError

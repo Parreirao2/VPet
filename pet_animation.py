@@ -3,6 +3,7 @@ from PIL import Image, ImageTk
 import os
 import math
 import random
+import time
 from datetime import datetime
 
 class PetAnimation:
@@ -33,32 +34,26 @@ class PetAnimation:
         self.root.after(0, self.animate)
     
     def _apply_sleep_effects(self):
-        if hasattr(self.pet_state, 'stats'):
-            energy_gain = random.randint(15, 25)  
-            hunger_loss = random.randint(3, 8)    
-            social_loss = random.randint(2, 5)    
+        """Apply effects while sleeping - energy recovery"""
+        if not hasattr(self.pet_state, 'stats') or not getattr(self.pet_state, 'is_sleeping', False):
+            return
             
-            self.pet_state.stats.modify_stat('energy', energy_gain)
-            self.pet_state.stats.modify_stat('hunger', -hunger_loss)
-            self.pet_state.stats.modify_stat('social', -social_loss)
-            
+        # Energy recovery is now handled by PetStats.update() during sleep
+        # This method only ensures the sleep animation continues
+        
+        # Continue sleeping effects if still sleeping
+        if getattr(self.pet_state, 'is_sleeping', False):
+            self.root.after(2000, self._apply_sleep_effects)
         
         if hasattr(self.pet_state, 'stats'):
             self.pet_state.stats.on_sickness_changed = self.update_sickness_display
         
-        
-        self.pet_state.current_animation = 'Standing'
-        
-        self.start_movement_watchdog()
-        
     def handle_stage_change(self, old_stage, new_stage):
         print(f"Pet evolved from {old_stage} to {new_stage}, playing evolution animation")
-        self.play_evolution_animation()
-        
-    def play_evolution_animation(self):
-        self.pet_state.is_interacting = True
+        # Set the current animation to Evolving to show the evolution frames
         self.pet_state.current_animation = 'Evolving'
-        self.root.after(2400, self.load_new_stage_animations) 
+        # Schedule the loading of new animations after the evolution animation duration
+        self.root.after(2400, self.load_new_stage_animations)
 
     def load_new_stage_animations(self):
         print("Evolution animation finished, reloading animations for new stage")
@@ -273,23 +268,30 @@ class PetAnimation:
             if hasattr(self.pet_state.stats, 'is_sick'):
                 self.pet_state.stats.is_sick = is_sick
             
-            if is_sick:
+            # Sleep animation always takes priority
+            is_sleeping = getattr(self.pet_state, 'is_sleeping', False)
+            
+            if is_sleeping:
+                # Ensure sleep animation is active
+                if self.pet_state.current_animation != 'sleeping':
+                    self.pet_state.current_animation = 'sleeping'
+                # Show sickness overlay if sick, but don't change animation
+                if is_sick and not self.sickness_icon_id:
+                    self.show_sickness_overlay()
+                elif not is_sick and self.sickness_icon_id:
+                    self.hide_sickness_overlay()
+            elif is_sick and not is_sleeping:
+                # Only show sick animation when not sleeping
                 if self.pet_state.current_animation != 'sick':
                     self.pet_state.current_animation = 'sick'
                 if not self.sickness_icon_id:
                     self.show_sickness_overlay()
             else:
+                # Not sick and not sleeping
                 if self.sickness_icon_id:
                     self.hide_sickness_overlay()
-            
-            if hasattr(self.pet_state.stats, 'is_sick'):
-                self.pet_state.stats.is_sick = is_sick
-                
-            if is_sick and not self.sickness_icon_id:
-                self.load_sickness_icon()
-                self.show_sickness_overlay()
-            elif not is_sick and self.sickness_icon_id:
-                self.hide_sickness_overlay()
+                if self.pet_state.current_animation in ['sick', 'sleeping']:
+                    self.pet_state.current_animation = 'Standing'
     
     def animate(self):
         try:
@@ -297,7 +299,7 @@ class PetAnimation:
                 'Standing': ['Walk1', 'Walk2'],
                 'Walking': ['Walk1', 'Walk2'],
                 'happy': ['Happy', 'Walk1'],
-                'sleeping': ['Sleep1'],
+                'sleeping': ['Sleep1', 'Sleep2'],
                 'eating': ['Eat1', 'Eat2'],
                 'playing': ['Attack', 'Walk1'],
                 'special': ['Happy', 'Walk1', 'Walk2', 'Happy'],
@@ -305,6 +307,13 @@ class PetAnimation:
                 'sad': ['Lose1', 'Walk1'],
                 'sick': ['Walk1', 'Lose1']
             }
+            
+            # Check if pet is sleeping and suppress some animations
+            # BUT allow eating and happy animations to play even when sleeping
+            is_sleeping = getattr(self.pet_state, 'is_sleeping', False)
+            if is_sleeping and self.pet_state.current_animation in ['playing', 'angry']:
+                self.pet_state.current_animation = 'sleeping'
+            # Remove 'happy' and 'eating' from the suppressed animations list
             
             if self.pet_state.current_animation == 'Evolving':
                 sequence = self.animations.get('Evolving', [])
@@ -358,31 +367,72 @@ class PetAnimation:
         self.root.after(100, self.animate)
     
     def start_random_movement(self):
+        if getattr(self.pet_state, 'is_sleeping', False):
+            self.root.after(5000, self.start_random_movement)
+            return
+        
+        # Calculate sleep chance based on energy (only when energy < 15%)
+        energy = self.pet_state.stats.get_stat('energy')
+        
+        if energy < 15:  # Changed from <= 15 to < 15 to match main.py
+            # Auto-sleep when energy is below 15%
+            energy_needed = 100 - energy
+            sleep_time = (energy_needed / 12) * 60  # 12 energy per minute recovery
+            
+            self.pet_state.current_animation = 'sleeping'
+            self.pet_state.is_sleeping = True
+            self.pet_state.sleep_start_time = datetime.now()
+            self.pet_state.sleep_duration = int(sleep_time * 1000)  # Convert to milliseconds
+            
+            # Schedule wake up when energy reaches 100%
+            self.root.after(int(sleep_time * 1000), self.wake_up)
+            return
+        
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         
         def move_randomly():
+            is_sleeping = getattr(self.pet_state, 'is_sleeping', False)
+            # move_randomly check - is_interacting: {self.pet_state.is_interacting}, is_sleeping: {is_sleeping}, current_animation: {self.pet_state.current_animation}
+            
+            if self.pet_state.is_interacting or is_sleeping:
+                # move_randomly blocked - is_interacting: {self.pet_state.is_interacting}, is_sleeping: {is_sleeping}
+                # Reschedule check if sleeping
+                if is_sleeping:
+                    self.movement_timer = self.root.after(5000, move_randomly)
+                return
+                
             if not self.pet_state.is_interacting:
                 activity_level = self.settings['activity_level']
                 idle_chance = (11 - activity_level) * 10
                 
                 if random.randint(1, 100) <= idle_chance:
-                    # Decide between standing idle or sleeping
-                    time_since_sleep = (datetime.now() - self.last_sleep_time).total_seconds()
+                    # Check energy level for automatic sleep
+                    current_energy = self.pet_state.stats.stats.get('energy', 100)
                     
-                    # Increase sleep chance if pet hasn't slept in a while
-                    base_sleep_chance = 15  # 15% base chance (reduced from 25%)
-                    if time_since_sleep > 600:  # 10 minutes since last sleep (increased from 5)
-                        sleep_chance = min(35, base_sleep_chance + (time_since_sleep - 600) / 120 * 5)  # Max 35% (reduced from 60%)
-                    else:
-                        sleep_chance = base_sleep_chance
-                    
-                    if random.randint(1, 100) <= sleep_chance:
-                        # Pet decides to take a nap
-                        sleep_time = random.randint(8000, 20000)  # 8-20 seconds sleep
+                    # Only allow auto-sleep when energy is below 15%
+                    # Remove random sleep rolls as requested
+                    if current_energy < 15:
+                        # Calculate sleep time based on missing energy
+                        missing_energy = 100 - current_energy
+                        if missing_energy > 0:
+                            # Scale sleep time: 1-3 minutes based on missing energy
+                            sleep_time = int(max(60000, min(180000, missing_energy * 3000)))
+                        else:
+                            sleep_time = random.randint(8000, 20000)  # Default 8-20 seconds
+                        
                         self.pet_state.current_animation = 'sleeping'
                         self.pet_state.is_interacting = True  # Prevent movement during sleep
+                        self.pet_state.is_sleeping = True  # Explicit sleep flag
                         self.last_sleep_time = datetime.now()
+                        
+                        # Cancel any existing movement
+                        if self.movement_timer:
+                            self.root.after_cancel(self.movement_timer)
+                            self.movement_timer = None
+                        if self.movement_step_timer:
+                            self.root.after_cancel(self.movement_step_timer)
+                            self.movement_step_timer = None
                         
                         # Apply sleep stat effects
                         self._apply_sleep_effects()
@@ -392,9 +442,12 @@ class PetAnimation:
                             if self.pet_state.current_animation == 'sleeping':
                                 self.pet_state.current_animation = 'Standing'
                                 self.pet_state.is_interacting = False
+                                self.pet_state.is_sleeping = False
+                                # Resume movement after waking
+                                self.start_random_movement()
                         
                         self.root.after(sleep_time, wake_up)
-                        self.movement_timer = self.root.after(sleep_time + 1000, move_randomly)  # Resume movement after waking
+                        return  # Don't schedule next movement until wake up
                     else:
                         # Pet just stands idle
                         idle_time = random.randint(5000, 15000)
@@ -419,10 +472,25 @@ class PetAnimation:
                 
                 self.move_step()
                 
-                delay = int(10000 - (activity_level * 800))
+                # In the start_random_movement method, around line 481:
+                # Replace the variable delay with a more consistent one
+                activity_level = self.settings['activity_level']
+                # More consistent delay calculation
+                base_delay = 8000  # 8 seconds base
+                activity_modifier = (10 - activity_level) * 500  # Less dramatic variation
+                delay = int(base_delay + activity_modifier)
                 self.movement_timer = self.root.after(delay, move_randomly)
         
         move_randomly()
+    
+    def wake_up(self):
+        """Wake up the pet from sleep"""
+        if getattr(self.pet_state, 'is_sleeping', False):
+            self.pet_state.current_animation = 'Standing'
+            self.pet_state.is_interacting = False
+            self.pet_state.is_sleeping = False
+            # Resume movement after waking
+            self.start_random_movement()
     
     def move_step(self):
         if not hasattr(self, 'target_x') or not hasattr(self, 'target_y'):
@@ -436,7 +504,9 @@ class PetAnimation:
         distance = math.sqrt(dx*dx + dy*dy)
         
         if distance < 5:
-            self.pet_state.current_animation = 'Standing'
+            # Don't override special animations like eating, playing, etc.
+            if self.pet_state.current_animation in ['Walking']:
+                self.pet_state.current_animation = 'Standing'
             return
         
         # Update direction based on current movement (fix for direction inconsistency)
@@ -446,11 +516,11 @@ class PetAnimation:
                 self.pet_state.direction = new_direction
         
         speed = self.settings.get('movement_speed', 5)
-        step_size = speed * 0.5
+        base_step_size = max(1, speed)  # Minimum 1 pixel per step
         
         if distance > 0:
-            step_x = dx * step_size / distance
-            step_y = dy * step_size / distance
+            step_x = dx * base_step_size / distance
+            step_y = dy * base_step_size / distance
         else:
             step_x = 0
             step_y = 0
@@ -487,6 +557,11 @@ class PetAnimation:
             self.start_random_movement()
     
     def force_restart_movement(self):
+        print(f"[DEBUG] force_restart_movement called - current_animation: {self.pet_state.current_animation}, is_sleeping: {getattr(self.pet_state, 'is_sleeping', False)}")
+        if getattr(self.pet_state, 'is_sleeping', False) or self.pet_state.current_animation == 'sleeping':
+            print(f"[DEBUG] Preventing force_restart_movement during sleep")
+            return
+            
         if self.movement_timer:
             self.root.after_cancel(self.movement_timer)
             self.movement_timer = None
@@ -506,10 +581,19 @@ class PetAnimation:
     
     def start_movement_watchdog(self):
         def check_movement():
-            if (not self.pet_state.is_interacting and 
-                self.pet_state.current_animation == 'Standing' and 
+            print(f"[DEBUG] Movement watchdog check - is_interacting: {self.pet_state.is_interacting}, current_animation: {self.pet_state.current_animation}, movement_timer: {self.movement_timer}, is_sleeping: {getattr(self.pet_state, 'is_sleeping', False)}")
+            
+            # Skip all movement restart logic if pet is sleeping
+            if getattr(self.pet_state, 'is_sleeping', False) or self.pet_state.current_animation == 'sleeping':
+                print(f"[DEBUG] Movement watchdog detected sleeping state - skipping restart")
+                self.root.after(15000, check_movement)
+                return
+                
+            if (not self.pet_state.is_interacting and
+                self.pet_state.current_animation == 'Standing' and
                 not self.movement_timer):
                 
+                print(f"[DEBUG] Movement watchdog triggering force_restart_movement")
                 self.force_restart_movement()
             
             self.root.after(15000, check_movement)
@@ -517,6 +601,10 @@ class PetAnimation:
         self.root.after(15000, check_movement)
     
     def schedule_resume_movement(self, delay_ms):
+        print(f"[DEBUG] schedule_resume_movement called with delay: {delay_ms}ms, is_sleeping: {getattr(self.pet_state, 'is_sleeping', False)}")
+        if getattr(self.pet_state, 'is_sleeping', False):
+            print(f"[DEBUG] Skipping resume movement due to sleep state")
+            return
         if self.resume_timer:
             self.root.after_cancel(self.resume_timer)
         self.resume_timer = self.root.after(delay_ms, self.resume_movement)
@@ -527,25 +615,3 @@ class PetAnimation:
         y = self.root.winfo_y() + event.y - 128
         self.root.geometry(f'+{x}+{y}')
     
-    def create_tray_icon(self):
-        from PIL import ImageDraw
-        
-        icon_size = 64
-        icon_image = Image.new('RGB', (icon_size, icon_size), color=(73, 109, 137))
-        
-        try:
-            base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frames')
-            img_path = os.path.join(base_path, f'{self.pet_state.stage}_Walk1.png')
-            if os.path.exists(img_path):
-                pet_image = Image.open(img_path)
-                pet_image = pet_image.resize((icon_size, icon_size), Image.LANCZOS)
-                icon_image = pet_image
-        except Exception as e:
-            print(f"Error creating tray icon: {e}")
-            draw = ImageDraw.Draw(icon_image)
-            draw.ellipse((16, 16, 48, 48), fill=(255, 255, 255))
-            draw.ellipse((24, 24, 30, 30), fill=(0, 0, 0))
-            draw.ellipse((38, 24, 44, 30), fill=(0, 0, 0))
-            draw.arc((24, 32, 44, 42), start=0, end=180, fill=(0, 0, 0), width=2)
-        
-        return icon_image

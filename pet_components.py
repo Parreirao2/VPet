@@ -94,10 +94,43 @@ class PetStats:
         elapsed_minutes = (now - self.last_update).total_seconds() / 60.0
         self.last_update = now
         
-        if hasattr(self.growth, 'behavior') and self.growth.behavior.current_activity == 'sleeping':
-            energy_gain = (elapsed_minutes * 12)
-            self.modify_stat('energy', energy_gain)
-            
+        # Check if sleeping through either behavior or direct state
+        is_sleeping = (hasattr(self, 'pet_state') and getattr(self.pet_state, 'is_sleeping', False)) or \
+                      (hasattr(self.growth, 'behavior') and getattr(self.growth.behavior, 'current_activity', None) == 'sleeping')
+                       
+        if is_sleeping:
+            # Only recover energy if below 100%
+            if self.stats['energy'] < 100:
+                energy_gain = (elapsed_minutes * 12)
+                old_energy = self.stats['energy']
+                hunger_before = self.stats['hunger']
+                
+                # Calculate hunger decrease (0.5% hunger for each 1% energy recovered)
+                # But only if hunger is above 0%
+                hunger_decrease = 0
+                if hunger_before > 0:
+                    hunger_decrease = min(hunger_before, energy_gain * 0.5)
+                
+                # Apply energy gain and hunger decrease
+                self.modify_stat('energy', energy_gain)
+                if hunger_decrease > 0:
+                    self.modify_stat('hunger', -hunger_decrease)
+                
+                new_energy = self.stats['energy']
+                new_hunger = self.stats['hunger']
+                
+                # Wake up when energy reaches 100%
+                if new_energy >= 100 and hasattr(self, 'pet_state'):
+                    self.pet_state.is_sleeping = False
+                    self.pet_state.sleep_start_time = None
+                    self.pet_state.current_animation = 'Standing'
+            else:
+                # Energy is at 100%, wake up the pet
+                if hasattr(self, 'pet_state') and getattr(self.pet_state, 'is_sleeping', False):
+                    self.pet_state.is_sleeping = False
+                    self.pet_state.sleep_start_time = None
+                    self.pet_state.current_animation = 'Standing'
+        
         for stat, decay_rate in self.decay_rates.items():
             self.modify_stat(stat, -decay_rate * elapsed_minutes)
         
@@ -254,9 +287,9 @@ class PetGrowth:
         self.stats = stats
         self.stage = 'Baby'
         self.evolution_thresholds = {
-            'Baby': 1,
-            'Child': 2,
-            'Teen': 3
+            'Baby': 30,
+            'Child': 60,
+            'Teen': 90
         }
         self.skills = {
             'intelligence': 1,
@@ -341,10 +374,6 @@ class PetBehavior:
         return self.current_mood
     
     def decide_activity(self):
-        if self.stats.get_stat('energy') <= 0:
-            self.current_activity = 'sleeping'
-            return self.current_activity
-
         now = datetime.now()
         if (now - self.last_random_action).total_seconds() < 30:
             return self.current_activity
@@ -352,8 +381,12 @@ class PetBehavior:
         hunger = self.stats.get_stat('hunger')
         energy = self.stats.get_stat('energy')
         
-        if energy < 20:
+        # Use the same threshold as in main.py (15%)
+        if energy < 15:  # Changed from 5 to 15 to match main.py
             self.current_activity = 'sleeping'
+            if not getattr(self.stats.pet_state, 'is_sleeping', False):
+                self.stats.pet_state.is_sleeping = True
+                self.stats.pet_state.sleep_start_time = datetime.now()
         elif hunger < 30:
             self.current_activity = 'hungry'
         else:

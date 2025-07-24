@@ -23,7 +23,8 @@ COLORS = {
     'disabled': '#cccccc',
     'tooltip_bg': '#f0f0f0',
     'tooltip_text': '#333333',
-    'poop_brown': '#8B4513'
+    'poop_brown': '#8B4513',
+    'info': '#2196F3'
 }
 
 
@@ -629,7 +630,6 @@ class SimpleSettingsWindow:
         if hasattr(self.pet_manager.pet_state, 'stats') and hasattr(self.pet_manager.pet_state.stats, 'decay_rates'):
             self.pet_manager.pet_state.stats.decay_rates[stat] = value
             self.pet_manager.update_setting(f'stat_depletion_{stat}', value)
-            print(f"Updated {stat} depletion rate to {value:.1f}")
         else:
             self.show_notification("Update Failed", f"Could not update {stat} depletion rate", COLORS['error'])
     
@@ -771,7 +771,12 @@ class SimpleSettingsWindow:
                                  bg=color, fg="white", wraplength=250)
         message_label.pack()
         
-        notification.after(3000, notification.destroy)
+        # Auto-close after 2 seconds
+        notification.after(2000, notification.destroy)
+        
+        # Ensure notification closes if settings window closes
+        if self.window:
+            self.window.bind("<Destroy>", lambda e: notification.destroy() if notification.winfo_exists() else None)
 
 class ModernSettingsWindow(SimpleSettingsWindow):
     
@@ -901,89 +906,8 @@ class ModernSettingsWindow(SimpleSettingsWindow):
         speed_slider.bind("<Motion>", update_speed_label)
         speed_slider.bind("<ButtonRelease-1>", update_speed_label)
     
-    def _create_save_tab(self, parent):
-        save_frame = ttk.LabelFrame(parent, text="Save Pet", padding=10)
-        save_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        save_btn = ModernButton(save_frame, text="Save Current Pet", command=self.save_pet,
-                               width=150, height=30, bg=COLORS['primary'])
-        save_btn.pack(pady=5)
-        
-        load_frame = ttk.LabelFrame(parent, text="Load Pet", padding=10)
-        load_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        ttk.Label(load_frame, text="Available Save Files:", style="Modern.TLabel").pack(anchor="w")
-        
-        list_frame = ttk.Frame(load_frame, style="Modern.TFrame")
-        list_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        
-        scrollbar = ttk.Scrollbar(list_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        save_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, 
-                                  bg=COLORS['surface'], fg=COLORS['text'],
-                                  selectbackground=COLORS['primary'],
-                                  selectforeground="white",
-                                  font=("Arial", 10),
-                                  relief=tk.FLAT,
-                                  borderwidth=0)
-        save_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        scrollbar.config(command=save_listbox.yview)
-        
-        self.save_listbox = save_listbox
-        
-        for save_file in self.pet_manager.get_save_files():
-            save_listbox.insert(tk.END, save_file)
-        
-        button_frame = ttk.Frame(load_frame, style="Modern.TFrame")
-        button_frame.pack(fill=tk.X, pady=5)
-        
-        load_btn = ModernButton(button_frame, text="Load Selected", 
-                               command=lambda: self.load_pet(save_listbox.get(tk.ACTIVE)),
-                               width=120, height=30, bg=COLORS['primary'])
-        load_btn.pack(side=tk.LEFT, padx=(0, 10))
-        
-        delete_btn = ModernButton(button_frame, text="Delete Selected", 
-                                command=lambda: self.delete_pet_save(save_listbox),
-                                width=120, height=30, bg=COLORS['error'])
-        delete_btn.pack(side=tk.LEFT)
-        
-        reset_frame = ttk.LabelFrame(parent, text="Reset Pet", padding=10)
-        reset_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        ttk.Label(reset_frame, text="Warning: This will reset your pet to Baby stage with 0 days age and default stats.",
-                 foreground=COLORS['error'], style="Modern.TLabel").pack(pady=5)
-        
-        reset_btn = ModernButton(reset_frame, text="Reset Pet", 
-                               command=self.reset_pet,
-                               width=150, height=30, bg=COLORS['error'])
-        reset_btn.pack(pady=5)
     
-    def _toggle_startup(self, enabled):
-        if enabled:
-            success = self.startup_manager.enable()
-        else:
-            success = self.startup_manager.disable()
-        
-        if success:
-            self.pet_manager.update_setting('start_with_windows', enabled)
-            self.show_notification("Startup Setting", 
-                                 "Windows startup enabled" if enabled else "Windows startup disabled",
-                                 COLORS['success'])
-        else:
-            self.show_notification("Startup Setting Failed",
-                                 "Failed to update Windows startup setting",
-                                 COLORS['error'])
     
-    def reset_pet(self):
-        if messagebox.askyesno("Confirm Reset", "Are you sure you want to reset your pet? This will reset to Baby stage with 0 days age and default stats."):
-            success, message = self.pet_manager.reset_pet()
-            if success:
-                messagebox.showinfo("Success", message)
-                self.window.destroy()
-            else:
-                messagebox.showerror("Error", f"Failed to reset pet: {message}")
 
     def show_notification(self, title, message, color):
         notification = tk.Toplevel(self.window)
@@ -1252,437 +1176,7 @@ class SpeechBubble:
             self.bubble_window.destroy()
             self.bubble_window = None
 
-class CombinedPanel(ttk.Frame):
-    
-    def __init__(self, parent, pet_manager, canvas):
-        super().__init__(parent)
-        self.pet_manager = pet_manager
-        self.canvas = canvas
-        self.simple_ui = SimpleUI(parent)
-        
-        self.parent = parent
-        self.pet_manager = pet_manager
-        self.canvas = canvas
-        self.is_visible = False
-        self.panel_window = None
-        self.stats_frame = None
-        self.actions_frame = None
-        self.update_timer = None
-        self.stats_visible = True
-        self._stat_widgets = {}
-        self.name_label = None
-        self.age_label = None
-        self.currency_label = None
-        self.weight_label = None
-        self.status_label = None
-        self.currency_icon = None
-        
-        self.actions = {
-            'inventory': {'text': 'Inventory', 'command': self.show_inventory},
-            'game_hub': {'text': 'Game Hub', 'command': self.show_game_hub}
-        }
-        
-    def show_panel(self, x=None, y=None):
-        if self.panel_window:
-            self.hide_panel()
-        
-        self.panel_window = tk.Toplevel(self.parent)
-        self.panel_window.overrideredirect(True)
-        self.panel_window.attributes('-topmost', True)
-        
-        self.panel_window.configure(bg=COLORS['background'])
-        
-        screen_width = self.parent.winfo_screenwidth()
-        screen_height = self.parent.winfo_screenheight()
-        
-        main_frame = tk.Frame(self.panel_window, bg=COLORS['surface'], bd=2, relief=tk.RAISED)
-        main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-        
-        container_frame = ttk.Frame(main_frame, style="Modern.TFrame")
-        container_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        button_frame = tk.Frame(container_frame, bg=COLORS['surface'])
-        button_frame.pack(fill=tk.X, padx=15, pady=5)
-        
-        close_btn = SimpleButton(button_frame, text="Close", command=self.hide_panel,
-                               width=10, height=1, bg=COLORS['error'])
-        close_btn.pack(side=tk.RIGHT, padx=5)
-        
-        self.stats_container = ttk.Frame(container_frame, style="Modern.TFrame")
-        self.stats_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
-        
-        stats_title = ttk.Label(self.stats_container, text="Pet Stats", style="Title.TLabel", font=("Arial", 12, "bold"))
-        stats_title.pack(anchor="w", padx=15, pady=(15, 5))
-        
-        self.stats_frame = ttk.Frame(self.stats_container, style="Modern.TFrame", padding=15)
-        self.stats_frame.pack(fill=tk.BOTH, padx=15, pady=5)
-        
-        self.actions_frame = ttk.Frame(container_frame, style="Modern.TFrame", padding=15)
-        self.actions_frame.pack(fill=tk.BOTH, padx=15, pady=5)
-        
-        self.create_action_buttons()
-        
-        self._stat_widgets = {}
-        
-        self._create_stat_widgets()
-        
-        self.update_stats_display()
-        
-        self.set_stats_visibility(self.stats_visible)
-        
-        self.is_visible = True
-        
-        self.update_timer = self.parent.after(100, self.periodic_update)
-    
-    def hide_panel(self):
-        if self.panel_window:
-            if self.update_timer:
-                self.parent.after_cancel(self.update_timer)
-                self.update_timer = None
-            self.panel_window.destroy()
-            self.panel_window = None
-            self.stats_frame = None
-            self.actions_frame = None
-            self._stat_widgets = None
-            self.is_visible = False
-    
-    def toggle_stats_visibility(self):
-        self.stats_visible = True
-    
-    def set_stats_visibility(self, visible):
-        self.stats_visible = True
-        self.stats_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
-    
-    def create_stat_bar(self, parent, label, value, row, critical_threshold=20):
-        if value <= critical_threshold:
-            status_color = COLORS['error']
-        elif value >= 80:
-            status_color = COLORS['success']
-        else:
-            status_color = COLORS['text']
-        
-        ttk.Label(parent, text=f"{label}:", style="Modern.TLabel", font=("Arial", 10, "bold")).grid(row=row, column=0, sticky="w")
-        
-        bar_frame = ttk.Frame(parent, style="Modern.TFrame")
-        bar_frame.grid(row=row, column=1, padx=(5, 0), pady=5, sticky="w")
-        
-        style = "Critical.Horizontal.TProgressbar" if value <= critical_threshold else "Modern.Horizontal.TProgressbar"
-        
-        bar = ttk.Progressbar(bar_frame, length=150, maximum=100, value=value, style=style)
-        bar.pack(fill="x")
-        
-        ttk.Label(bar_frame, text=f"{int(value)}%", style="Modern.TLabel", font=("Arial", 8), foreground=status_color).pack(anchor="e")
-        
-        return bar
-    
-    def create_action_buttons(self):
-        row, col = 0, 0
-        for action, details in self.actions.items():
-            btn = SimpleButton(self.actions_frame, text=details['text'], command=details['command'], 
-                             width=8, height=1, bg=COLORS['primary'])
-            btn.grid(row=row, column=col, padx=5, pady=5)
-            
-            col += 1
-            if col > 2:
-                col = 0
-                row += 1
-    
-    def update_stats_display(self):
-        if not self.stats_frame or not self.panel_window:
-            return
-            
-        try:
-            self.panel_window.winfo_exists()
-        except tk.TclError:
-            self.hide_panel()
-            return
-            
-        stats = self.pet_manager.get_stats_summary()
-        
-        if not hasattr(self, '_stat_widgets') or not self._stat_widgets or len(self._stat_widgets) == 0:
-            for widget in self.stats_frame.winfo_children():
-                widget.destroy()
-            self._stat_widgets = {}
-            self._create_stat_widgets()
-            self.stats_frame.update()
-        
-        try:
-            if hasattr(self, 'name_label') and self.name_label:
-                self.name_label.config(text=f"{stats['name']} - {stats['stage']}")
-            
-            if hasattr(self, 'age_label') and self.age_label:
-                self.age_label.config(text=f"Age: {stats['age']} days")
-            
-            if hasattr(self, 'currency_label') and self.currency_label:
-                self.currency_label.config(text=f"Coins: {self.pet_manager.pet_state.currency}")
-            
-            self._update_stat_bar(stats['hunger'], "hunger")
-            self._update_stat_bar(stats['happiness'], "happiness")
-            self._update_stat_bar(stats['energy'], "energy")
-            self._update_stat_bar(stats['health'], "health")
-            self._update_stat_bar(stats['cleanliness'], "cleanliness")
-            self._update_stat_bar(stats['social'], "social")
-            
-            poop_chance = self._calculate_poop_chance()
-            self._update_stat_bar(poop_chance, "poop_chance")
-            
-            
-            self.stats_frame.update()
-            
-            if stats['status_effects']:
-                effects_text = ", ".join(stats['status_effects'])
-                if hasattr(self, 'status_label') and self.status_label:
-                    self.status_label.config(text=f"Status: {effects_text}", fg=COLORS['error'])
-                    if not self.status_label.winfo_ismapped():
-                        self.status_label.pack(anchor="w", pady=(5, 0))
-                else:
-                    self.status_label = tk.Label(self.stats_frame, text=f"Status: {effects_text}", 
-                                              font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['error'])
-                    self.status_label.pack(anchor="w", pady=(5, 0))
-            elif hasattr(self, 'status_label') and self.status_label and self.status_label.winfo_ismapped():
-                self.status_label.pack_forget()
-                
-        except tk.TclError as e:
-            print(f"TclError in update_stats_display: {e}")
-            self.hide_panel()
-        except Exception as e:
-            print(f"Error in update_stats_display: {e}")
-            try:
-                for widget in self.stats_frame.winfo_children():
-                    widget.destroy()
-                self._stat_widgets = {}
-                self._create_stat_widgets()
-                self.stats_frame.update()
-            except tk.TclError:
-                self.hide_panel()
-    
-    def _create_stat_bar(self, value, label):
-        stat_frame = tk.Frame(self.stats_frame, bg=COLORS['surface'])
-        stat_frame.pack(fill="x", pady=3)
-        
-        if value <= 25:
-            bar_color = COLORS['error']
-            text_color = COLORS['error'] if value == 0 else COLORS['text']
-        elif value <= 50:
-            bar_color = COLORS['warning']
-            text_color = COLORS['text']
-        else:
-            bar_color = COLORS['success']
-            text_color = COLORS['success'] if value >= 90 else COLORS['text']
-        
-        label_width = 80
-        stat_label = tk.Label(stat_frame, text=f"{label}:", width=10, anchor="w",
-                            font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['text'])
-        stat_label.pack(side=tk.LEFT, padx=(0, 5))
-        
-        bar_container = tk.Frame(stat_frame, height=15, width=150, bg=COLORS['background'])
-        bar_container.pack(side=tk.LEFT, padx=5)
-        bar_container.pack_propagate(False)
-        
-        bar_width = int(150 * value / 100)
-        
-        if value > 0:
-            bar = tk.Frame(bar_container, height=15, width=bar_width, bg=bar_color)
-            bar.place(x=0, y=0)
-        
-        value_label = tk.Label(stat_frame, text=f"{int(value)}%", width=5, anchor="e",
-                             font=("Arial", 9), bg=COLORS['surface'], fg=text_color)
-        value_label.pack(side=tk.LEFT, padx=(5, 0))
-        
-    def _create_stat_widgets(self):
-        if not self.stats_frame:
-            return
-            
-        if not hasattr(self, '_stat_widgets') or self._stat_widgets is None:
-            self._stat_widgets = {}
-        else:
-            for widget in self.stats_frame.winfo_children():
-                widget.destroy()
-            self._stat_widgets = {}
-        
-        stats = self.pet_manager.get_stats_summary()
-        
-        self.name_label = tk.Label(self.stats_frame, text=f"{stats['name']} - {stats['stage']}", 
-                             font=("Arial", 12, "bold"), bg=COLORS['surface'], fg=COLORS['primary'])
-        self.name_label.pack(anchor="w", pady=(0, 10))
-        
-        self._stat_widgets['name_stage'] = self.name_label
-        
-        self.age_label = tk.Label(self.stats_frame, text=f"Age: {stats['age']} days", 
-                            font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['text'])
-        self.age_label.pack(anchor="w")
-        
-        currency_frame = tk.Frame(self.stats_frame, bg=COLORS['surface'])
-        currency_frame.pack(anchor="w", pady=(5, 10), fill="x")
-        
-        try:
-            img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img_assets', 'currency.png')
-            if os.path.exists(img_path):
-                img = Image.open(img_path).convert("RGBA")
-                img = img.resize((16, 16), Image.LANCZOS)
-                self.currency_icon = ImageTk.PhotoImage(img)
-        except Exception as e:
-            print(f"Error loading currency icon: {e}")
-        
-        if hasattr(self, 'currency_icon') and self.currency_icon:
-            self.currency_icon_label = tk.Label(currency_frame, image=self.currency_icon, bg=COLORS['surface'])
-            self.currency_icon_label.image = self.currency_icon
-            self.currency_icon_label.pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.currency_label = tk.Label(currency_frame, text=f"Coins: {self.pet_manager.pet_state.currency}", 
-                                font=("Arial", 10, "bold"), bg=COLORS['surface'], fg=COLORS['text'])
-        self.currency_label.pack(side=tk.LEFT)
-        
-        stats_header = tk.Label(self.stats_frame, text="Pet Statistics", 
-                               font=("Arial", 11, "bold"), bg=COLORS['surface'], fg=COLORS['primary'])
-        stats_header.pack(anchor="w", pady=(10, 5))
-        
-        stat_names = ["hunger", "happiness", "energy", "health", "cleanliness", "social"]
-        
-        for stat_name in stat_names:
-            stat_value = stats[stat_name]
-            
-            stat_frame = tk.Frame(self.stats_frame, bg=COLORS['surface'])
-            stat_frame.pack(fill="x", pady=3)
-            
-            display_name = stat_name.capitalize()
-            stat_label = tk.Label(stat_frame, text=f"{display_name}:", width=10, anchor="w",
-                                font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['text'])
-            stat_label.pack(side=tk.LEFT, padx=(0, 5))
-            
-            bar_container = tk.Frame(stat_frame, height=15, width=150, bg=COLORS['background'])
-            bar_container.pack(side=tk.LEFT, padx=5)
-            bar_container.pack_propagate(False)
-            
-            if stat_value <= 25:
-                bar_color = COLORS['error']
-                text_color = COLORS['error'] if stat_value == 0 else COLORS['text']
-            elif stat_value <= 50:
-                bar_color = COLORS['warning']
-                text_color = COLORS['text']
-            else:
-                bar_color = COLORS['success']
-                text_color = COLORS['success'] if stat_value >= 90 else COLORS['text']
-            
-            bar_width = max(1, int(150 * stat_value / 100))
-            
-            if stat_value > 0:
-                bar = tk.Frame(bar_container, bg=bar_color)
-                bar.place(x=0, y=0, width=bar_width, height=15)
-            
-            value_label = tk.Label(stat_frame, text=f"{int(stat_value)}%", width=8, anchor="e",
-                                 font=("Arial", 10, "bold"), bg=COLORS['surface'], fg=text_color)
-            value_label.pack(side=tk.LEFT, padx=(10, 0))
-            value_label.lift()
-            
-            self._stat_widgets[f"{stat_name}_bar"] = bar
-            self._stat_widgets[f"{stat_name}_label"] = value_label
-            self._stat_widgets[f"{stat_name}_container"] = bar_container
-            
-        self._create_poop_chance_bar()
-     
-        self.stats_frame.update()
-        
-    def show_inventory(self):
-        if self.pet_manager:
-            self.hide_panel()
-            self.pet_manager.show_inventory()
-    
-    def show_game_hub(self):
-        if self.pet_manager:
-            self.hide_panel()
-            self.pet_manager.show_game_hub()
-    
-    def show_chat(self):
-        if self.pet_manager:
-            if not hasattr(self.pet_manager, 'ai_chat_system'):
-                from ai_chat_system import AIChatSystem
-                self.pet_manager.ai_chat_system = AIChatSystem(self.pet_manager)
-            
-            self.pet_manager.ai_chat_system.show_chat_interface()
-            self.hide_panel()
-    
-    def _calculate_poop_chance(self):
-        try:
-            if hasattr(self.pet_manager, 'pet_state') and hasattr(self.pet_manager.pet_state, 'poop_system'):
-                poop_system = self.pet_manager.pet_state.poop_system
-                
-                cleanliness = self.pet_manager.pet_state.stats.get_stat('cleanliness') if hasattr(self.pet_manager.pet_state, 'stats') else 100
-                
-                if hasattr(poop_system, 'current_poop_chance'):
-                    base_chance = poop_system.current_poop_chance
-                else:
-                    pressure_ratio = getattr(poop_system, 'poop_pressure', 0) / getattr(poop_system, 'max_poop_pressure', 100)
-                    base_chance = getattr(poop_system, 'base_poop_chance', 0.05) + (pressure_ratio * (getattr(poop_system, 'max_poop_chance', 0.4) - getattr(poop_system, 'base_poop_chance', 0.05)))
-                
-                cleanliness_factor = 1 + ((100 - cleanliness) / 200)
-                adjusted_chance = base_chance * cleanliness_factor
-                
-                return min(adjusted_chance * 100, 95)
-            else:
-                return 0
-        except Exception as e:
-            print(f"Error calculating poop chance: {e}")
-            return 0
-    
-    def _create_poop_chance_bar(self):
-        if not self.stats_frame:
-            return
-            
-        poop_chance_value = self._calculate_poop_chance()
-        
-        poop_stat_frame = tk.Frame(self.stats_frame, bg=COLORS['surface'])
-        poop_stat_frame.pack(fill="x", pady=3)
-        
-        poop_stat_label = tk.Label(poop_stat_frame, text="Poop Chance:", width=10, anchor="w",
-                            font=("Arial", 10), bg=COLORS['surface'], fg=COLORS['text'])
-        poop_stat_label.pack(side=tk.LEFT, padx=(0, 5))
-        
-        poop_bar_container = tk.Frame(poop_stat_frame, height=15, width=150, bg=COLORS['background'])
-        poop_bar_container.pack(side=tk.LEFT, padx=5)
-        poop_bar_container.pack_propagate(False)
-        
-        poop_bar_width = max(1, int(150 * poop_chance_value / 100))
-        
-        if poop_chance_value > 0:
-            poop_bar = tk.Frame(poop_bar_container, bg=COLORS['poop_brown'])
-            poop_bar.place(x=0, y=0, width=poop_bar_width, height=15)
-        
-        poop_value_label = tk.Label(poop_stat_frame, text=f"{int(poop_chance_value)}%", width=8, anchor="e",
-                             font=("Arial", 10, "bold"), bg=COLORS['surface'], fg=COLORS['text'])
-        poop_value_label.pack(side=tk.LEFT, padx=(10, 0))
-        poop_value_label.lift()
-        
-        self._stat_widgets["poop_chance_bar"] = poop_bar
-        self._stat_widgets["poop_chance_label"] = poop_value_label
-        self._stat_widgets["poop_chance_container"] = poop_bar_container
-    
-    def show_notification(self, title, message, color):
-        notification = tk.Toplevel(self.panel_window if self.panel_window else self.parent)
-        notification.title(title)
-        notification.geometry("300x100")
-        notification.resizable(False, False)
-        notification.configure(bg=color)
-        notification.attributes('-topmost', True)
-        
-        parent_window = self.panel_window if self.panel_window else self.parent
-        x = parent_window.winfo_x() + (parent_window.winfo_width() - 300) // 2
-        y = parent_window.winfo_y() + (parent_window.winfo_height() - 100) // 2
-        notification.geometry(f"+{x}+{y}")
-        
-        frame = tk.Frame(notification, bg=color, padx=10, pady=10)
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        title_label = tk.Label(frame, text=title, font=("Arial", 12, "bold"),
-                                bg=color, fg="white")
-        title_label.pack(pady=(0, 5))
-        
-        message_label = tk.Label(frame, text=message, font=("Arial", 10),
-                                 bg=color, fg="white", wraplength=250)
-        message_label.pack()
-        
-        notification.after(3000, notification.destroy)
-        
+       
 class SimpleStatusPanel:
     
     def __init__(self, parent, pet_manager):
@@ -1712,6 +1206,11 @@ class SimpleStatusPanel:
         self.panel_window.overrideredirect(True)  # No window decorations
         self.panel_window.attributes('-topmost', True)  # Keep on top
         
+        # Position the window before making it visible to prevent flicker
+        if x is not None and y is not None:
+            # Set initial position to prevent flicker
+            self.panel_window.geometry(f"+{x}+{y}")
+        
         # Use solid background color
         self.panel_window.configure(bg=COLORS['background'])
         
@@ -1719,13 +1218,16 @@ class SimpleStatusPanel:
         main_frame = tk.Frame(self.panel_window, bg=COLORS['surface'], bd=2, relief=tk.RAISED)
         main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
         
-        # Create title frame
+        # Create title frame with timer space
         title_frame = tk.Frame(main_frame, bg=COLORS['surface'])
         title_frame.pack(fill=tk.X, padx=10, pady=5)
         
         title_label = tk.Label(title_frame, text="Pet Stats", font=("Arial", 12, "bold"),
                               bg=COLORS['surface'], fg=COLORS['primary'])
         title_label.pack(side=tk.LEFT, padx=5)
+        # Ensure visibility of sleep timer if it exists
+        if hasattr(self, 'sleep_timer_label') and self.sleep_timer_label:
+            self.sleep_timer_label.lift()
         
         # Create stats frame with increased fixed width to prevent flashing and ensure stats values are visible
         self.stats_frame = tk.Frame(main_frame, bg=COLORS['surface'], padx=15, pady=15, width=350, height=390)
@@ -1737,25 +1239,25 @@ class SimpleStatusPanel:
         button_frame.pack(fill=tk.X, padx=10, pady=5)
         
         # Add inventory button
-        inventory_btn = SimpleButton(button_frame, text="Inventory", 
+        inventory_btn = SimpleButton(button_frame, text="Inventory",
                                   command=self.show_inventory,
                                   bg=COLORS['primary'])
         inventory_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
         # Add game hub button
-        game_hub_btn = SimpleButton(button_frame, text="Game Hub", 
+        game_hub_btn = SimpleButton(button_frame, text="Game Hub",
                                  command=self.show_game_hub,
                                  bg=COLORS['primary'])
         game_hub_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
         # Add chat button
-        chat_btn = SimpleButton(button_frame, text="Chat with Pet", 
+        chat_btn = SimpleButton(button_frame, text="Chat with Pet",
                                command=self.show_chat,
                                bg=COLORS['secondary'])
         chat_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
         # Add close button
-        close_btn = SimpleButton(button_frame, text="Close", 
+        close_btn = SimpleButton(button_frame, text="Close",
                               command=self.hide_panel,
                               bg=COLORS['error'])
         close_btn.pack(side=tk.RIGHT, padx=5, pady=5)
@@ -1785,12 +1287,23 @@ class SimpleStatusPanel:
         
         # Position near the click location if coordinates provided
         if x is not None and y is not None:
+            # Check if panel dimensions are 0, which would cause issues
+            if panel_width == 0 or panel_height == 0:
+                self.panel_window.update_idletasks()
+                panel_width = self.panel_window.winfo_width()
+                panel_height = self.panel_window.winfo_height()
+            
             # Adjust position to keep panel within screen boundaries
             panel_x = max(0, min(x, screen_width - panel_width))
             panel_y = max(0, min(y, screen_height - panel_height))
             
             # Set panel position
             self.panel_window.geometry(f"+{panel_x}+{panel_y}")
+            
+            # Check the actual position after setting
+            self.panel_window.update_idletasks()
+            actual_x = self.panel_window.winfo_x()
+            actual_y = self.panel_window.winfo_y()
         else:
             # Fall back to adaptive positioning based on pet's position
             self._position_panel_adaptively()
@@ -1800,13 +1313,16 @@ class SimpleStatusPanel:
         # Start periodic updates
         self.update_timer = self.parent.after(100, self.periodic_update)
         
+        
         # Make sure the panel is visible and on top
         self.panel_window.lift()
         self.panel_window.attributes('-topmost', True)
         
-        # Force update to ensure the panel is displayed
-        self.panel_window.update()
-        self.panel_window.deiconify()
+        # After a short delay, reset topmost to allow proper window layering
+        self.panel_window.after(500, lambda: self.panel_window.attributes('-topmost', False))
+        # Check the final position
+        final_x = self.panel_window.winfo_x()
+        final_y = self.panel_window.winfo_y()
     
     def _position_panel_adaptively(self):
         """Position the panel based on pet's position on screen"""
@@ -1901,6 +1417,17 @@ class SimpleStatusPanel:
         # Get current stats
         stats = self.pet_manager.get_stats_summary()
         
+        # Update sleep timer display if available
+        if hasattr(self, 'sleep_timer_label') and self.sleep_timer_label:
+            if (hasattr(self.pet_manager, 'pet_state') and
+                hasattr(self.pet_manager.pet_state, 'is_sleeping') and
+                self.pet_manager.pet_state.is_sleeping and
+                hasattr(self.pet_manager.pet_state, 'get_sleep_timer_display')):
+                sleep_timer_text = self.pet_manager.pet_state.get_sleep_timer_display()
+                self.sleep_timer_label.config(text=sleep_timer_text, bg=COLORS['primary'], fg="white", padx=5, pady=2)
+            else:
+                self.sleep_timer_label.config(text="", bg=COLORS['surface'])
+        
         # If widgets haven't been created yet, create them once
         if not hasattr(self, '_stat_widgets') or not self._stat_widgets or len(self._stat_widgets) == 0:
             # Clear any existing widgets in the stats frame
@@ -1955,11 +1482,9 @@ class SimpleStatusPanel:
                 
         except tk.TclError as e:
             # Widget error occurred, likely because panel was closed
-            print(f"TclError in update_stats_display: {e}")
             # Clean up properly
             self.hide_panel()
         except Exception as e:
-            print(f"Error in update_stats_display: {e}")
             # If there's an error, recreate the widgets
             try:
                 for widget in self.stats_frame.winfo_children():
@@ -2055,7 +1580,7 @@ class SimpleStatusPanel:
                 img = img.resize((16, 16), Image.LANCZOS)
                 self.currency_icon = ImageTk.PhotoImage(img)
         except Exception as e:
-            print(f"Error loading currency icon: {e}")
+            pass
         
         # Create icon label if icon was loaded
         if hasattr(self, 'currency_icon') and self.currency_icon:
@@ -2138,14 +1663,28 @@ class SimpleStatusPanel:
     def show_inventory(self):
         """Show the pet's inventory"""
         if self.pet_manager:
-            self.hide_panel()
-            self.pet_manager.show_inventory()
+            # Pass the panel window reference for positioning
+            if self.panel_window:
+                if self.panel_window.winfo_exists():
+                    parent_window = self.panel_window
+                else:
+                    parent_window = None
+            else:
+                parent_window = None
+            self.pet_manager.show_inventory(parent_window=parent_window)
     
     def show_game_hub(self):
         """Show the game hub"""
         if self.pet_manager:
-            self.hide_panel()
-            self.pet_manager.show_game_hub()
+            # Pass the panel window reference for positioning
+            if self.panel_window:
+                if self.panel_window.winfo_exists():
+                    parent_window = self.panel_window
+                else:
+                    parent_window = None
+            else:
+                parent_window = None
+            self.pet_manager.show_game_hub(parent_window=parent_window)
     
     def _update_stat_bar(self, value, stat_name):
         """Update an existing stat bar with new value"""
@@ -2331,7 +1870,6 @@ class SimpleStatusPanel:
             # Also update the poop system directly if it exists
             if hasattr(self.pet_manager, 'poop_system') and self.pet_manager.poop_system:
                 self.pet_manager.poop_system.poop_chance = poop_var.get()
-                print(f"Poop frequency updated to {poop_var.get():.1f}")
             
         poop_slider.bind("<Motion>", update_poop_label)
         poop_slider.bind("<ButtonRelease-1>", update_poop_label)
@@ -2391,32 +1929,6 @@ class SimpleStatusPanel:
             rate_slider.bind("<Motion>", lambda e, s=stat, v=rate_var, lbl=value_label: lbl.config(text=f"{v.get():.1f}"))
             rate_slider.bind("<ButtonRelease-1>", update_rate)
     
-    def _apply_advanced_changes(self, new_age, new_stage):
-        """Apply changes from advanced settings"""
-        try:
-            # Update age if provided
-            if new_age.strip():
-                age = float(new_age)
-                if 0 <= age <= 1000:  # Reasonable limit
-                    self.pet_manager.pet_state.stats['age'] = age
-                    # Force evolution check after age change
-                    self.pet_manager.check_evolution()
-                else:
-                    self.show_notification("Invalid Age", "Age must be between 0 and 1000 days", COLORS['warning'])
-                    return
-            
-            # Update stage if changed
-            if new_stage != self.pet_manager.pet_state.stage:
-                if self.pet_manager.evolve_to(new_stage):
-                    self.show_notification("Stage Updated", f"Pet evolved to {new_stage} stage", COLORS['success'])
-                else:
-                    self.show_notification("Stage Update Failed", "Could not update pet stage", COLORS['error'])
-                    return
-            
-            self.show_notification("Changes Applied", "Advanced settings updated successfully", COLORS['success'])
-            
-        except ValueError:
-            self.show_notification("Invalid Input", "Please enter a valid number for age", COLORS['error'])
     
     def _update_depletion_rate(self, stat, new_rate):
         """Update stat depletion rate"""
@@ -2463,13 +1975,11 @@ class SimpleStatusPanel:
         """Show the pet's inventory"""
         if self.pet_manager:
             self.pet_manager.show_inventory()
-            self.hide_panel()
     
     def show_game_hub(self):
         """Show the game hub"""
         if self.pet_manager:
             self.pet_manager.show_game_hub()
-            self.hide_panel()
     
     def show_chat(self):
         """Show the AI chat interface"""
@@ -2479,8 +1989,9 @@ class SimpleStatusPanel:
                 from ai_chat_system import AIChatSystem
                 self.pet_manager.ai_chat_system = AIChatSystem(self.pet_manager)
             
-            self.pet_manager.ai_chat_system.show_chat_interface()
-            self.hide_panel()
+            # Pass the panel window reference for positioning
+            parent_window = self.panel_window if self.panel_window and self.panel_window.winfo_exists() else None
+            self.pet_manager.ai_chat_system.create_chat_window(parent_window=parent_window)
     
     def _calculate_poop_chance(self):
         """Calculate the current poop chance percentage"""

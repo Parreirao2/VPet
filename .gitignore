@@ -1,2 +1,20 @@
 # Ignore the saves directory to protect sensitive user data
 /saves/
+
+# Ignore all files except .py files
+*.*
+!*.py
+
+# Ignore all directories except frames and img_assets
+*/
+!frames/
+!img_assets/
+
+# Explicitly allow specific files
+!LICENSE
+!README.md
+!requirements.txt
+
+# Allow the frames directory and all its contents
+!frames/**
+!img_assets/**

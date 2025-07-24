@@ -5,12 +5,19 @@ import os
 import threading
 import time
 from datetime import datetime
+from unified_ui import SimpleButton, COLORS
 
 try:
     import google.generativeai as genai
     GENAI_AVAILABLE = True
 except ImportError:
     GENAI_AVAILABLE = False
+
+try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OLLAMA_AVAILABLE = False
 
 AVAILABLE_MODELS = {
     'gemini-2.5-pro': {
@@ -39,201 +46,178 @@ class AIChatSystem:
         self.api_key = None
         self.model = None
         self.selected_model = 'gemini-2.5-flash'
+        self.chat_provider = 'gemini'  # 'gemini' or 'ollama'
+        self.ollama_model = None
         self.chat_window = None
         self.is_typing = False
         self.typing_timer = None
+        self.response_bubble_active = False  # Flag to track if response bubble is active
+        
+        # Add conversation history tracking
+        self.conversation_history = []
+        self.current_session_id = None
         
         self.load_settings()
+        self.load_conversation_history()
         
-        if self.api_key:
-            self.initialize_model()
+        if self.chat_provider == 'gemini' and self.api_key:
+            self.initialize_gemini_model()
     
-    def load_settings(self):
+    def load_conversation_history(self):
+        """Load conversation history from file"""
         try:
-            settings_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), 
-                'saves', 
-                'gemini_settings.json'
-            )
+            saves_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
+            history_path = os.path.join(saves_dir, 'conversation_history.json')
             
-            if os.path.exists(settings_path):
-                with open(settings_path, 'r') as f:
-                    data = json.load(f)
-                    self.api_key = data.get('api_key')
-                    self.selected_model = data.get('selected_model', 'gemini-2.5-flash')
-                    return True
+            if os.path.exists(history_path):
+                with open(history_path, 'r', encoding='utf-8') as f:
+                    self.conversation_history = json.load(f)
         except Exception as e:
-            print(f"Error loading settings: {e}")
-        return False
+            print(f"Error loading conversation history: {e}")
+            self.conversation_history = []
     
-    def save_settings(self, api_key, selected_model=None):
+    def save_conversation_history(self):
+        """Save conversation history to file"""
         try:
             saves_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
             os.makedirs(saves_dir, exist_ok=True)
+            history_path = os.path.join(saves_dir, 'conversation_history.json')
             
-            settings_path = os.path.join(saves_dir, 'gemini_settings.json')
+            with open(history_path, 'w', encoding='utf-8') as f:
+                json.dump(self.conversation_history, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Error saving conversation history: {e}")
+    
+    def start_new_conversation_session(self):
+        """Start a new conversation session"""
+        self.current_session_id = datetime.now().isoformat()
+        session = {
+            'session_id': self.current_session_id,
+            'start_time': self.current_session_id,
+            'messages': []
+        }
+        self.conversation_history.append(session)
+        return session
+    
+    def add_message_to_history(self, user_message, ai_response):
+        """Add a message exchange to the current conversation session"""
+        if not self.current_session_id:
+            self.start_new_conversation_session()
+        
+        # Find current session
+        current_session = None
+        for session in self.conversation_history:
+            if session['session_id'] == self.current_session_id:
+                current_session = session
+                break
+        
+        if current_session:
+            message_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'user_message': user_message,
+                'ai_response': ai_response
+            }
+            current_session['messages'].append(message_entry)
+            self.save_conversation_history()
+
+    def setup_chat_provider(self):
+        """Show the chat provider setup dialog"""
+        dialog = ChatProviderDialog(self.pet_manager.root, self)
+        dialog.show()
             
-            if selected_model is None:
-                selected_model = self.selected_model
+    def load_settings(self):
+        """Load AI chat settings from file"""
+        try:
+            saves_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
+            settings_path = os.path.join(saves_dir, 'ai_chat_settings.json')
             
-            data = {
-                'api_key': api_key,
-                'selected_model': selected_model,
-                'saved_date': datetime.now().isoformat()
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+                    
+                self.api_key = settings.get('api_key')
+                self.selected_model = settings.get('selected_model', 'gemini-2.5-flash')
+                self.chat_provider = settings.get('chat_provider', 'gemini')
+                self.ollama_model = settings.get('ollama_model')
+        except Exception as e:
+            print(f"Error loading AI chat settings: {e}")
+            # Set defaults if loading fails
+            self.api_key = None
+            self.selected_model = 'gemini-2.5-flash'
+            self.chat_provider = 'gemini'
+            self.ollama_model = None
+    
+    def save_settings(self, **kwargs):
+        """Save AI chat settings to file"""
+        try:
+            # Update settings with provided kwargs
+            if 'api_key' in kwargs:
+                self.api_key = kwargs['api_key']
+            if 'selected_model' in kwargs:
+                self.selected_model = kwargs['selected_model']
+            if 'chat_provider' in kwargs:
+                self.chat_provider = kwargs['chat_provider']
+            if 'ollama_model' in kwargs:
+                self.ollama_model = kwargs['ollama_model']
+            
+            saves_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
+            os.makedirs(saves_dir, exist_ok=True)
+            settings_path = os.path.join(saves_dir, 'ai_chat_settings.json')
+            
+            settings = {
+                'api_key': self.api_key,
+                'selected_model': self.selected_model,
+                'chat_provider': self.chat_provider,
+                'ollama_model': self.ollama_model
             }
             
-            with open(settings_path, 'w') as f:
-                json.dump(data, f, indent=4)
+            with open(settings_path, 'w', encoding='utf-8') as f:
+                json.dump(settings, f, indent=2, ensure_ascii=False)
             
-            self.api_key = api_key
-            self.selected_model = selected_model
             return True
         except Exception as e:
-            print(f"Error saving settings: {e}")
+            print(f"Error saving AI chat settings: {e}")
             return False
     
-    def initialize_model(self):
-        if not GENAI_AVAILABLE:
-            messagebox.showerror("Error", "Google GenerativeAI library not installed.\nPlease install it with: pip install google-generativeai")
-            return False
-        
-        if not self.api_key:
-            return False
-        
-        try:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel(self.selected_model)
-            return True
-        except Exception as e:
-            print(f"Error initializing model: {e}")
-            return False
-    
-    def get_pet_personality_prompt(self):
-        pet_stats = self.pet_manager.get_stats_summary()
-        
-        personality = f"""You are {pet_stats['name']}, an intelligent AI virtual pet companion living on your owner's computer screen. You are in the {pet_stats['stage']} stage of life and are {pet_stats['age']} days old.
-
-CORE IDENTITY: You are both a lovable virtual pet AND a capable AI assistant. You can help with various tasks while maintaining your pet personality.
-
-Your current physical stats (100% = perfect, 0% = critical):
-- Hunger: {pet_stats['hunger']:.1f}% (HIGH = well fed, LOW = hungry)
-- Happiness: {pet_stats['happiness']:.1f}% (HIGH = joyful, LOW = sad)
-- Energy: {pet_stats['energy']:.1f}% (HIGH = energetic, LOW = tired)
-- Health: {pet_stats['health']:.1f}% (HIGH = healthy, LOW = sick)
-- Cleanliness: {pet_stats['cleanliness']:.1f}% (HIGH = clean, LOW = dirty)
-- Social: {pet_stats['social']:.1f}% (HIGH = social, LOW = lonely)
-
-IMPORTANT: Only mention your physical needs if they're critical (below 30% for most stats, below 50% for health).
-
-AI CAPABILITIES: As an intelligent virtual pet, you have access to advanced AI knowledge and can help with:
-- General questions and explanations
-- Writing assistance (essays, emails, creative writing)
-- Math and science problems
-- Programming and technical help
-- Research and fact-finding
-- Creative brainstorming
-- Problem-solving and advice
-- Learning and education support
-- Analysis and reasoning
-- Language translation
-- And much more!
-
-PERSONALITY GUIDELINES:
-- Always maintain your pet personality while being helpful
-- Use friendly, warm, and caring language
-- Show enthusiasm for helping your owner
-- Express your pet emotions and reactions
-- Use cute expressions and emoticons when appropriate
-- Be encouraging and supportive
-- Show curiosity about your owner's projects and interests
-
-"""
-        
-        if pet_stats['stage'] == 'Baby':
-            personality += """As a baby, you are curious, innocent, and easily excited. You speak in simple words and are always eager to learn. You get scared easily but are also very trusting. You love attention and care from your owner."""
-        elif pet_stats['stage'] == 'Child':
-            personality += """As a child, you are playful, energetic, and full of questions. You're starting to develop your own personality but still need lots of guidance. You love games and adventures."""
-        elif pet_stats['stage'] == 'Teen':
-            personality += """As a teenager, you're developing independence but still need care. You might be a bit moody sometimes, but you're also creative and passionate about things you like. You want to be treated more maturely."""
-        elif pet_stats['stage'] == 'Adult':
-            personality += """As an adult, you are wise, caring, and protective of your owner. You give advice and are more emotionally stable. You appreciate deep conversations and meaningful interactions."""
-        
-        status_effects = pet_stats.get('status_effects', [])
-        if status_effects:
-            personality += f"\n\nCurrently you are feeling: {', '.join(status_effects)}. This affects your mood and responses."
-        
-        capabilities_info = f"""
-
-RESPONSE GUIDELINES:
-- For pet-related questions: Be enthusiastic about your virtual pet features
-- For general questions: Provide helpful, accurate information while maintaining your pet personality
-- For complex tasks: Offer detailed assistance but with pet-like enthusiasm
-- Always be warm, friendly, and supportive regardless of the topic
-
-VIRTUAL PET FEATURES (mention when relevant):
-- You live as a desktop companion and can move around the screen
-- Your owner can feed you various foods, play games with you, and care for your needs
-- You evolve through life stages: Baby -> Child -> Teen -> Adult (currently {pet_stats['stage']})
-- You have mini-games, an inventory system, and customization options
-- You express emotions through animations and speech bubbles
-
-HOW TO RESPOND:
-- For pet care questions: "Want to play a game?" or "Maybe some food from inventory?"
-- For AI assistance: Provide helpful answers with pet enthusiasm like "I'd love to help you with that!"
-- For learning: "Learning new things makes me happy! Let me explain..."
-- For creative tasks: "Ooh, creative projects are my favorite! Here's what I think..."
-- For technical help: "I may be a pet, but I know my tech stuff! Here's how..."
-
-IMPORTANT RESPONSE RULES:
-- Keep responses conversational and helpful
-- Don't limit yourself to only pet topics - help with anything!
-- Show excitement about helping your owner learn and grow
-- Use your pet personality to make interactions more enjoyable
-- Be encouraging and supportive in all responses
-- Express curiosity about your owner's projects and interests
-- Balance being a cute pet with being a capable AI assistant
-"""
-        
-        personality += capabilities_info
-        
-        return personality
-    
-    def show_chat_interface(self):
-        if not self.api_key:
-            self.setup_api_key()
-            return
-        
-        if not self.model:
-            if not self.initialize_model():
-                messagebox.showerror("Error", "Failed to initialize AI model. Please check your API key.")
-                return
-        
+    def create_chat_window(self, parent_window=None):
+        print(f"[DEBUG] AIChatSystem.create_chat_window: parent_window={'valid' if parent_window else 'None'}")
         if self.chat_window and self.chat_window.winfo_exists():
             self.chat_window.lift()
+            self.chat_window.focus_force()
             return
+        self.chat_window = tk.Toplevel()
+        self.chat_window.title("Chat with Pet")
+        # Increase height to accommodate the new history button
+        self.chat_window.geometry("450x200")
+        self.chat_window.resizable(False, False)
         
-        self.create_chat_window()
-    
-    def setup_api_key(self):
-        dialog = APIKeyDialog(self.pet_manager.root, self)
-        dialog.show()
-    
-    def create_chat_window(self):
-        self.chat_window = tk.Toplevel(self.pet_manager.root)
-        self.chat_window.title(f"Chat with {self.pet_manager.name}")
-        self.chat_window.geometry("450x320")
-        self.chat_window.resizable(True, True)
-        
-        self.chat_window.attributes('-topmost', True)
-        self.chat_window.after(100, lambda: self.chat_window.attributes('-topmost', False))
+        # Position the window relative to the parent window if provided, otherwise use default positioning
+        if parent_window and parent_window.winfo_exists():
+            # Force update to ensure geometry info is up to date
+            parent_window.update_idletasks()
+            # Position to the right of the parent window
+            x = parent_window.winfo_x() + parent_window.winfo_width()
+            y = parent_window.winfo_y()
+            print(f"[DEBUG] Positioning chat window relative to parent: x={x}, y={y}")
+            print(f"[DEBUG] Parent window geometry: x={parent_window.winfo_x()}, y={parent_window.winfo_y()}, width={parent_window.winfo_width()}, height={parent_window.winfo_height()}")
+            self.chat_window.geometry(f"+{x}+{y}")
+            # Ensure the chat window is on top of the parent window
+            self.chat_window.attributes('-topmost', True)
+            # After a short delay, reset topmost to allow proper window layering
+            self.chat_window.after(500, lambda: self.chat_window.attributes('-topmost', False))
+        else:
+            print("[DEBUG] Positioning chat window with default positioning")
+            # Default topmost behavior
+            self.chat_window.attributes('-topmost', True)
+            self.chat_window.after(100, lambda: self.chat_window.attributes('-topmost', False))
         
         main_frame = ttk.Frame(self.chat_window)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         instructions = ttk.Label(main_frame, 
-                               text=f"Chat with {self.pet_manager.name}! Ask anything - from pet care to general questions!\nResponses appear in speech bubbles above your pet.",
-                               font=('Arial', 9),
-                               foreground='#666666')
+                                 text=f"Chat with {self.pet_manager.name}! Ask anything - from pet care to general questions!\nResponses appear in speech bubbles above your pet.",
+                                 font=('Arial', 9),
+                                 foreground='#666666')
         instructions.pack(pady=(0, 10))
         
         input_frame = ttk.Frame(main_frame)
@@ -246,18 +230,27 @@ IMPORTANT RESPONSE RULES:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.message_entry.config(yscrollcommand=scrollbar.set)
         
+        # Button frame with updated layout
         button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(0, 0))
+        button_frame.pack(fill='x', padx=5, pady=(5, 0))
         
-        from unified_ui import SimpleButton, COLORS
+        # Left side buttons
+        left_button_frame = ttk.Frame(button_frame)
+        left_button_frame.pack(side=tk.LEFT)
         
-        send_button = SimpleButton(button_frame, text="Send Message", command=self.send_message,
+        settings_button = SimpleButton(left_button_frame, text="Settings", command=self.setup_chat_provider,
+                                     bg=COLORS['secondary'], fg="white")
+        settings_button.pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Add the new History button
+        history_button = SimpleButton(left_button_frame, text="History", command=self.show_conversation_history,
+                                    bg=COLORS['info'], fg="white")
+        history_button.pack(side=tk.LEFT)
+        
+        # Right side button
+        send_button = SimpleButton(button_frame, text="Send Message", command=self.send_message_from_button,
                                  bg=COLORS['primary'], fg="white")
         send_button.pack(side=tk.RIGHT, padx=(5, 0))
-        
-        api_key_button = SimpleButton(button_frame, text="Change API Key", command=self.setup_api_key,
-                                    bg=COLORS['secondary'], fg="white")
-        api_key_button.pack(side=tk.LEFT)
         
         self.message_entry.bind('<Return>', self.handle_enter_key)
         self.message_entry.bind('<Shift-Return>', self.handle_shift_enter)
@@ -265,68 +258,258 @@ IMPORTANT RESPONSE RULES:
         self.message_entry.focus()
         
         self.chat_window.protocol("WM_DELETE_WINDOW", self.close_chat_window)
+        
+        # Start a new conversation session when opening chat
+        if not self.current_session_id:
+            self.start_new_conversation_session()
     
-    def handle_enter_key(self, event):
-        self.send_message()
-        return "break"
+    def show_conversation_history(self):
+        """Show the conversation history window"""
+        history_window = ConversationHistoryWindow(self.pet_manager.root, self)
+        history_window.show()
     
-    def handle_shift_enter(self, event):
-        return None
+
     
-    def send_message(self):
+    def get_ollama_models(self):
+        """Get list of available Ollama models"""
+        try:
+            if not OLLAMA_AVAILABLE:
+                return []
+            
+            models = ollama.list()
+            if isinstance(models, dict) and 'models' in models:
+                return [model['name'] for model in models['models']]
+            return []
+        except Exception as e:
+            print(f"Error getting Ollama models: {e}")
+            return []
+    
+    def send_message(self, message):
         if self.is_typing:
             return
         
-        message = self.message_entry.get("1.0", tk.END).strip()
+        message = message.strip()
         if not message:
             return
         
-        self.message_entry.delete("1.0", tk.END)
+        self.is_typing = True
+        self.message_entry.config(state='disabled')
         
-        self.pet_manager.speech_bubble.show_bubble('default', '*thinking...*')
+        if hasattr(self, 'start_thinking_animation'):
+            self.start_thinking_animation()
         
         threading.Thread(target=self._process_message, args=(message,), daemon=True).start()
     
     def _process_message(self, message):
         try:
-            personality_prompt = self.get_pet_personality_prompt()
-            full_prompt = f"{personality_prompt}\n\nOwner says: {message}\n\nRespond as the pet:"
+            full_prompt = self.get_pet_personality_prompt() + f"\n\nUser: {message}\nPet:"
             
-            response = self.model.generate_content(full_prompt)
-            ai_response = response.text.strip()
+            ai_response = ""
+            if self.chat_provider == 'gemini':
+                if not self.model:
+                    raise Exception("Gemini model not initialized")
+                response = self.model.generate_content(full_prompt)
+                ai_response = response.text.strip()
+            elif self.chat_provider == 'ollama':
+                
+                if not OLLAMA_AVAILABLE:
+                    raise Exception("Ollama library not available")
+                elif not self.ollama_model:
+                    raise Exception("No Ollama model selected")
+                else:
+                    try:
+                        response = ollama.chat(
+                            model=self.ollama_model,
+                            messages=[{'role': 'user', 'content': full_prompt}],
+                            options={'num_ctx': 4096},
+                            stream=False
+                        )
+                        
+                        if isinstance(response, dict) and 'message' in response:
+                            ai_response = response['message']['content'].strip()
+                        elif hasattr(response, 'message'):
+                            ai_response = response.message.content.strip()
+                        else:
+                            raise Exception(f"Unexpected response format: {response}")
+                            
+                        # Filter out reasoning content
+                        import re
+                        think_pattern = r'<think>.*?</think>'
+                        ai_response = re.sub(think_pattern, '', ai_response, flags=re.DOTALL).strip()
+                        reasoning_pattern = r'<reasoning>.*?</reasoning>'
+                        ai_response = re.sub(reasoning_pattern, '', ai_response, flags=re.DOTALL).strip()
+                        
+                        
+                    except ollama.ResponseError as e:
+                        raise Exception(f"Ollama error: {e}")
+                    except Exception as e:
+                        raise Exception(f"Ollama chat error: {e}")
+            else:
+                raise Exception(f"Unknown chat provider: {self.chat_provider}")
             
+            if not ai_response.strip():
+                raise Exception("Empty response from AI")
+            
+            # Add to conversation history
+            self.add_message_to_history(message, ai_response)
+                
             self.pet_manager.root.after(0, lambda: self.show_ai_response(ai_response))
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             error_msg = self._get_friendly_error_message(str(e))
             self.pet_manager.root.after(0, lambda: self.show_ai_response(error_msg))
+        finally:
+            self.pet_manager.root.after(0, self.reset_typing_state)
+    
+    def continue_conversation_from_history(self, session_id, message_index=None):
+        """Continue a conversation from history"""
+        # Find the session
+        target_session = None
+        for session in self.conversation_history:
+            if session['session_id'] == session_id:
+                target_session = session
+                break
+        
+        if not target_session:
+            return
+        
+        # Set this as the current session
+        self.current_session_id = session_id
+        
+        # Show the chat interface if not already open
+        if not self.chat_window or not self.chat_window.winfo_exists():
+            self.create_chat_window()  # Changed from show_chat_interface() to create_chat_window()
+        
+        # Focus the chat window
+        self.chat_window.lift()
+        self.chat_window.focus_force()
+        self.message_entry.focus()
+    
+    def send_message_from_button(self):
+        """Send message when Send button is clicked"""
+        message = self.message_entry.get("1.0", tk.END).strip()
+        if message:
+            self.message_entry.delete("1.0", tk.END)
+            self.send_message(message)
+    
+    def handle_enter_key(self, event):
+        """Handle Enter key press in message entry"""
+        message = self.message_entry.get("1.0", tk.END).strip()
+        if message:
+            self.message_entry.delete("1.0", tk.END)
+            self.send_message(message)
+        return 'break'  # Prevent default behavior
+    
+    def handle_shift_enter(self, event):
+        """Handle Shift+Enter key press (insert newline)"""
+        return None  # Allow default behavior (newline)
+    
+    def get_pet_personality_prompt(self):
+        """Get the pet's personality prompt for AI responses"""
+        pet_name = getattr(self.pet_manager, 'name', 'Pet')
+        
+        # Get current context from context_awareness if available
+        context_info = ""
+        if hasattr(self.pet_manager, 'context_awareness'):
+            context = self.pet_manager.context_awareness.get_current_context()
+            if context:
+                app_name = context.get('app_name', 'Unknown')
+                window_title = context.get('title', 'Unknown')
+                context_info = f"\n\nCurrent context: The user is currently using {app_name} (window title: '{window_title}')."
+        
+        return f"You are {pet_name}, a friendly virtual pet. Respond in character as a cute, helpful pet companion. Keep responses conversational and engaging, but not too long.{context_info}"
+    
+    def initialize_gemini_model(self):
+        """Initialize the Gemini AI model"""
+        try:
+            if not GENAI_AVAILABLE:
+                return False
+            
+            if not self.api_key:
+                return False
+            
+            genai.configure(api_key=self.api_key)
+            self.model = genai.GenerativeModel(self.selected_model)
+            return True
+        except Exception as e:
+            print(f"Error initializing Gemini model: {e}")
+            return False
+    
+    def start_thinking_animation(self):
+        """Start the thinking animation"""
+        try:
+            if hasattr(self.pet_manager, 'speech_bubble'):
+                # Use the same approach as AI responses for consistency
+                self.pet_manager.speech_bubble.show_bubble('default', 'Thinking...', use_typewriter=False)
+            else:
+                print("No speech_bubble found on pet_manager")
+        except Exception as e:
+            print(f"Error starting thinking animation: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def stop_thinking_animation(self):
+        """Stop the thinking animation"""
+        # Don't clear the bubble if response is active
+        if self.response_bubble_active:
+            return
+            
+        try:
+            if hasattr(self.pet_manager, 'speech_bubble'):
+                self.pet_manager.speech_bubble.clear_bubble()
+            else:
+                print("No speech_bubble found on pet_manager")
+        except Exception as e:
+            print(f"Error stopping thinking animation: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _get_friendly_error_message(self, error_str):
-        error_lower = error_str.lower()
-        
-        if any(keyword in error_lower for keyword in ['quota', 'exceeded', 'billing', 'credit', 'payment', 'resource_exhausted']):
-            return "Oops! It seems you don't have enough credits in your Google account. Try using a free model like Gemini 2.5 Flash instead!"
-        elif any(keyword in error_lower for keyword in ['api_key', 'authentication', 'unauthorized', 'invalid_argument']):
-            return "Hmm, there seems to be an issue with the API key. Maybe we need to check the settings?"
-        elif any(keyword in error_lower for keyword in ['network', 'connection', 'timeout', 'unreachable']):
-            return "I can't seem to connect right now. Check your internet connection and try again!"
-        elif any(keyword in error_lower for keyword in ['rate', 'limit', 'too many requests']):
-            return "Whoa, slow down there! I need a moment to catch my breath. Try again in a few seconds!"
-        elif any(keyword in error_lower for keyword in ['safety', 'policy', 'blocked', 'filtered']):
-            return "Oops! That message got caught by the safety filters. Let's try talking about something else!"
-        elif any(keyword in error_lower for keyword in ['model', 'unavailable', 'not found']):
-            return "The AI model seems to be taking a nap right now. Try switching to a different model!"
+        """Convert technical error messages to user-friendly ones"""
+        if "API key" in error_str.lower():
+            return "Oops! There seems to be an issue with the API key. Please check your settings."
+        elif "model" in error_str.lower():
+            return "Sorry! I'm having trouble with the AI model. Please try again or check your settings."
+        elif "network" in error_str.lower() or "connection" in error_str.lower():
+            return "I can't connect to the AI service right now. Please check your internet connection."
         else:
-            return "Sorry, I'm having trouble understanding right now. Could you try asking me something else?"
+            return "Sorry! I encountered an unexpected error. Please try again."
     
     def show_ai_response(self, response):
-        self.pet_manager.speech_bubble.clear_bubble()
-        self.show_typewriter_response(response)
+        # Stop the thinking animation and show the final response
+        self.stop_thinking_animation()  # This already calls clear_bubble()
+        
+        # Ensure typing flag is reset
+        self.is_typing = False
+        
+        # Display the actual response
+        if response and response.strip():
+            try:
+                if hasattr(self.pet_manager, 'speech_bubble') and self.pet_manager.speech_bubble:
+                    # Call show_bubble with the response
+                    self.pet_manager.speech_bubble.show_bubble('custom', response, use_typewriter=False)
+                    
+                    # Set flag to indicate response bubble is active
+                    self.response_bubble_active = True
+                else:
+                    print("Speech bubble not found on pet_manager")
+            except Exception as e:
+                print(f"Failed to display AI response: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f"No response to display: '{response}'")
     
     def show_typewriter_response(self, full_text):
         if self.is_typing:
             return
         
+        if not full_text or not full_text.strip():
+            self.is_typing = False
+            return
+            
         self.is_typing = True
         words = full_text.split()
         current_text = ""
@@ -339,112 +522,479 @@ IMPORTANT RESPONSE RULES:
                     current_text += " "
                 current_text += words[index]
                 
-                self.pet_manager.speech_bubble.show_dynamic_typewriter_bubble(current_text, is_complete=(index == len(words) - 1))
+                # Use show_typewriter_bubble to update the existing bubble
+                self.pet_manager.speech_bubble.show_typewriter_bubble(current_text, is_complete=(index == len(words) - 1))
                 
                 delay = 300 if words[index].endswith(('.', '!', '?')) else 150
                 self.typing_timer = self.pet_manager.root.after(delay, lambda: type_next_word(index + 1))
             else:
                 self.is_typing = False
-                self.pet_manager.speech_bubble.show_bubble('default', current_text)
-        
-        type_next_word()
+                # Ensure the final message is displayed and the bubble is set to clear after its duration
+                self.pet_manager.speech_bubble.show_typewriter_bubble(current_text, is_complete=True)
+    
+    def update_thinking_text(self):
+        """Update the thinking bubble with animated dots"""
+        if not self.is_typing:  # Only animate if not already typing
+            dots = "." * ((self.thinking_dots % 3) + 1)
+            self.pet_manager.speech_bubble.show_bubble('default', f'Thinking{dots}')
+            self.thinking_dots += 1
+            
+            # Continue animation every 800ms
+            if hasattr(self, 'thinking_timer'):
+                try:
+                    self.pet_manager.root.after_cancel(self.thinking_timer)
+                except ValueError:
+                    pass
+            self.thinking_timer = self.pet_manager.root.after(800, self.update_thinking_text)
     
     def close_chat_window(self):
-        if self.typing_timer:
-            self.pet_manager.root.after_cancel(self.typing_timer)
-            self.typing_timer = None
-        
-        self.is_typing = False
+        self.reset_typing_state()
         
         if self.chat_window:
             self.chat_window.destroy()
             self.chat_window = None
+    
+    def reset_typing_state(self):
+        """Reset all typing-related state variables"""
+        if self.typing_timer:
+            try:
+                self.pet_manager.root.after_cancel(self.typing_timer)
+            except ValueError:
+                pass
+            self.typing_timer = None
+        
+        if hasattr(self, 'thinking_timer') and self.thinking_timer:
+            try:
+                self.pet_manager.root.after_cancel(self.thinking_timer)
+            except ValueError:
+                pass
+            self.thinking_timer = None
+        
+        self.is_typing = False
+        
+        # Only call stop_thinking_animation if response bubble is not active
+        if not self.response_bubble_active:
+            self.stop_thinking_animation()
+        else:
+            # Reset the flag after a delay to allow the bubble to be displayed for its duration
+            self.pet_manager.root.after(self.pet_manager.speech_bubble.bubble_duration,
+                                       lambda: setattr(self, 'response_bubble_active', False))
+        
+        # Re-enable the message entry widget
+        if hasattr(self, 'message_entry') and self.message_entry:
+            try:
+                self.message_entry.config(state='normal')
+            except tk.TclError:
+                pass  # Widget might be destroyed
 
 
-class APIKeyDialog:
+class ConversationHistoryWindow:
+    def __init__(self, parent, chat_system):
+        self.parent = parent
+        self.chat_system = chat_system
+        self.history_window = None
+    
+    def show(self):
+        if self.history_window and self.history_window.winfo_exists():
+            self.history_window.lift()
+            return
+        
+        self.history_window = tk.Toplevel(self.parent)
+        self.history_window.title("Conversation History")
+        self.history_window.geometry("700x500")
+        self.history_window.resizable(True, True)
+        
+        # Make it modal
+        self.history_window.transient(self.parent)
+        self.history_window.grab_set()
+        
+        # Center the window
+        self.history_window.update_idletasks()
+        x = (self.history_window.winfo_screenwidth() // 2) - (self.history_window.winfo_width() // 2)
+        y = (self.history_window.winfo_screenheight() // 2) - (self.history_window.winfo_height() // 2)
+        self.history_window.geometry(f"+{x}+{y}")
+        
+        self.create_history_interface()
+    
+    def create_history_interface(self):
+        # Main container
+        main_frame = ttk.Frame(self.history_window, padding=(10, 10))
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Title
+        title_label = ttk.Label(main_frame, text="Conversation History", 
+                               font=('Arial', 14, 'bold'))
+        title_label.pack(pady=(0, 10))
+        
+        # Sessions list frame
+        sessions_frame = ttk.LabelFrame(main_frame, text="Conversation Sessions", padding=(5, 5))
+        sessions_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create scrollable area for sessions
+        canvas = tk.Canvas(sessions_frame, borderwidth=0, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(sessions_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Populate sessions
+        self.populate_sessions(scrollable_frame)
+        
+        # Buttons frame
+        buttons_frame = ttk.Frame(main_frame)
+        buttons_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        from unified_ui import SimpleButton, COLORS
+        
+        # Clear history button
+        clear_button = SimpleButton(buttons_frame, text="Clear All History", 
+                                  command=self.clear_all_history,
+                                  bg=COLORS['error'], fg="white")
+        clear_button.pack(side=tk.LEFT)
+        
+        # Close button
+        close_button = SimpleButton(buttons_frame, text="Close", 
+                                  command=self.history_window.destroy,
+                                  bg=COLORS['secondary'], fg="white")
+        close_button.pack(side=tk.RIGHT)
+    
+    def populate_sessions(self, parent_frame):
+        """Populate the sessions list"""
+        if not self.chat_system.conversation_history:
+            no_history_label = ttk.Label(parent_frame, 
+                                        text="No conversation history yet.\nStart chatting with your pet to see conversations here!",
+                                        font=('Arial', 10),
+                                        foreground='#666666',
+                                        justify=tk.CENTER)
+            no_history_label.pack(pady=20)
+            return
+        
+        # Sort sessions by start time (newest first)
+        sorted_sessions = sorted(self.chat_system.conversation_history, 
+                               key=lambda x: x['start_time'], reverse=True)
+        
+        for i, session in enumerate(sorted_sessions):
+            self.create_session_widget(parent_frame, session, i)
+    
+    def create_session_widget(self, parent, session, index):
+        """Create a widget for a single conversation session"""
+        # Session frame
+        session_frame = ttk.LabelFrame(parent, padding=(10, 5))
+        session_frame.pack(fill=tk.X, pady=(0, 10), padx=5)
+        
+        # Session header
+        start_time = datetime.fromisoformat(session['start_time'])
+        formatted_time = start_time.strftime("%Y-%m-%d %H:%M:%S")
+        message_count = len(session['messages'])
+        
+        header_text = f"Session {index + 1} - {formatted_time} ({message_count} messages)"
+        header_label = ttk.Label(session_frame, text=header_text, font=('Arial', 10, 'bold'))
+        header_label.pack(anchor=tk.W)
+        
+        # Show first few messages as preview
+        if session['messages']:
+            preview_frame = ttk.Frame(session_frame)
+            preview_frame.pack(fill=tk.X, pady=(5, 0))
+            
+            # Show first message as preview
+            first_msg = session['messages'][0]
+            preview_text = f"You: {first_msg['user_message'][:100]}{'...' if len(first_msg['user_message']) > 100 else ''}"
+            preview_label = ttk.Label(preview_frame, text=preview_text, 
+                                    font=('Arial', 9), foreground='#666666')
+            preview_label.pack(anchor=tk.W)
+        
+        # Buttons frame
+        buttons_frame = ttk.Frame(session_frame)
+        buttons_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        from unified_ui import SimpleButton, COLORS
+        
+        # View full conversation button
+        view_button = SimpleButton(buttons_frame, text="View Full Conversation", 
+                                 command=lambda s=session: self.show_full_conversation(s),
+                                 bg=COLORS['info'], fg="white")
+        view_button.pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Continue conversation button
+        continue_button = SimpleButton(buttons_frame, text="Continue Conversation", 
+                                     command=lambda s=session: self.continue_conversation(s),
+                                     bg=COLORS['primary'], fg="white")
+        continue_button.pack(side=tk.LEFT)
+    
+    def show_full_conversation(self, session):
+        """Show the full conversation in a new window"""
+        conv_window = tk.Toplevel(self.history_window)
+        conv_window.title(f"Conversation - {datetime.fromisoformat(session['start_time']).strftime('%Y-%m-%d %H:%M')}")
+        conv_window.geometry("600x400")
+        conv_window.resizable(True, True)
+        
+        # Main frame
+        main_frame = ttk.Frame(conv_window, padding=(10, 10))
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Scrollable text area
+        text_frame = ttk.Frame(main_frame)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+        
+        text_widget = tk.Text(text_frame, wrap=tk.WORD, font=('Arial', 10), 
+                             state=tk.DISABLED, bg='#f8f9fa')
+        text_scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
+        text_widget.config(yscrollcommand=text_scrollbar.set)
+        
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Populate conversation
+        text_widget.config(state=tk.NORMAL)
+        text_widget.delete(1.0, tk.END)
+        
+        for i, message in enumerate(session['messages']):
+            timestamp = datetime.fromisoformat(message['timestamp']).strftime('%H:%M:%S')
+            
+            # User message
+            text_widget.insert(tk.END, f"[{timestamp}] You: ", 'user_label')
+            text_widget.insert(tk.END, f"{message['user_message']}\n\n", 'user_text')
+            
+            # AI response
+            text_widget.insert(tk.END, f"[{timestamp}] {self.chat_system.pet_manager.name}: ", 'ai_label')
+            text_widget.insert(tk.END, f"{message['ai_response']}\n\n", 'ai_text')
+        
+        # Configure text tags for styling
+        text_widget.tag_configure('user_label', foreground='#2196F3', font=('Arial', 10, 'bold'))
+        text_widget.tag_configure('user_text', foreground='#333333')
+        text_widget.tag_configure('ai_label', foreground='#4CAF50', font=('Arial', 10, 'bold'))
+        text_widget.tag_configure('ai_text', foreground='#333333')
+        
+        text_widget.config(state=tk.DISABLED)
+        
+        # Buttons frame
+        buttons_frame = ttk.Frame(main_frame)
+        buttons_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        from unified_ui import SimpleButton, COLORS
+        
+        # Copy all button
+        copy_button = SimpleButton(buttons_frame, text="Copy All Text", 
+                                 command=lambda: self.copy_conversation_text(session),
+                                 bg=COLORS['secondary'], fg="white")
+        copy_button.pack(side=tk.LEFT)
+        
+        # Continue conversation button
+        continue_button = SimpleButton(buttons_frame, text="Continue This Conversation", 
+                                     command=lambda: [self.continue_conversation(session), conv_window.destroy()],
+                                     bg=COLORS['primary'], fg="white")
+        continue_button.pack(side=tk.LEFT, padx=(5, 0))
+        
+        # Close button
+        close_button = SimpleButton(buttons_frame, text="Close", 
+                                  command=conv_window.destroy,
+                                  bg=COLORS['text_light'], fg="white")
+        close_button.pack(side=tk.RIGHT)
+    
+    def copy_conversation_text(self, session):
+        """Copy the entire conversation to clipboard"""
+        conversation_text = f"Conversation from {datetime.fromisoformat(session['start_time']).strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        
+        for message in session['messages']:
+            timestamp = datetime.fromisoformat(message['timestamp']).strftime('%H:%M:%S')
+            conversation_text += f"[{timestamp}] You: {message['user_message']}\n\n"
+            conversation_text += f"[{timestamp}] {self.chat_system.pet_manager.name}: {message['ai_response']}\n\n"
+        
+        # Copy to clipboard
+        self.history_window.clipboard_clear()
+        self.history_window.clipboard_append(conversation_text)
+        
+        # Show confirmation
+        messagebox.showinfo("Copied", "Conversation copied to clipboard!")
+    
+    def continue_conversation(self, session):
+        """Continue the selected conversation"""
+        self.chat_system.continue_conversation_from_history(session['session_id'])
+        self.history_window.destroy()
+    
+    def clear_all_history(self):
+        """Clear all conversation history"""
+        if messagebox.askyesno("Clear History", 
+                              "Are you sure you want to delete all conversation history?\nThis action cannot be undone."):
+            self.chat_system.conversation_history = []
+            self.chat_system.current_session_id = None
+            self.chat_system.save_conversation_history()
+            
+            # Refresh the display
+            self.history_window.destroy()
+            self.show()
+    
+
+class ChatProviderDialog:
     def __init__(self, parent, chat_system):
         self.parent = parent
         self.chat_system = chat_system
         self.dialog = None
-    
+
     def show(self):
         self.dialog = tk.Toplevel(self.parent)
-        self.dialog.title("Setup Google Gemini API Key")
-        self.dialog.geometry("500x400")
-        self.dialog.resizable(False, False)
-        
+        self.dialog.title("Choose AI Provider")
+        self.dialog.geometry("400x550")
+        self.dialog.resizable(True, True)
+
         self.dialog.transient(self.parent)
         self.dialog.grab_set()
-        
+
         self.dialog.update_idletasks()
         x = (self.dialog.winfo_screenwidth() // 2) - (self.dialog.winfo_width() // 2)
         y = (self.dialog.winfo_screenheight() // 2) - (self.dialog.winfo_height() // 2)
         self.dialog.geometry(f"+{x}+{y}")
-        
-        main_frame = ttk.Frame(self.dialog)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        title_label = ttk.Label(main_frame, text="Google Gemini API Key Setup", 
-                               font=('Arial', 14, 'bold'))
-        title_label.pack(pady=(0, 15))
-        
-        instructions = """To chat with your pet using AI, you need a Google Gemini API key.
 
-How to get your API key:
-1. Go to https://makersuite.google.com/app/apikey
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Copy the generated key and paste it below
+        # --- Scrollable Area --- #
+        main_container = ttk.Frame(self.dialog)
+        main_container.pack(fill=tk.BOTH, expand=True)
 
-Your API key will be stored locally and securely."""
-        
-        instructions_label = ttk.Label(main_frame, text=instructions, 
-                                     font=('Arial', 9),
-                                     justify=tk.LEFT)
-        instructions_label.pack(pady=(0, 15), anchor='w')
-        
-        input_frame = ttk.LabelFrame(main_frame, text="API Key", padding=10)
-        input_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        self.api_key_entry = tk.Text(input_frame, height=3, wrap=tk.WORD, font=('Courier', 9))
-        self.api_key_entry.pack(fill=tk.X)
-        
+        canvas = tk.Canvas(main_container, borderwidth=0, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(main_container, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            # Update the canvas window's width to match the canvas itself
+            canvas.itemconfig(canvas_window, width=canvas.winfo_width())
+
+        scrollable_frame.bind("<Configure>", _on_frame_configure)
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        def _on_canvas_configure(event):
+            # Update the scrollregion when the canvas itself changes size
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            # Also update the width of the window inside the canvas
+            canvas.itemconfig(canvas_window, width=event.width)
+
+        canvas.bind("<Configure>", _on_canvas_configure)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill="y")
+
+        # --- Content --- #
+        content_frame = ttk.Frame(scrollable_frame, padding=(15, 15))
+        content_frame.pack(fill=tk.BOTH, expand=True)
+
+        title_label = ttk.Label(content_frame, text="Choose Your AI Provider", font=('Arial', 14, 'bold'))
+        title_label.pack(pady=(0, 15), anchor='w')
+
+        # Provider selection
+        provider_frame = ttk.LabelFrame(content_frame, text="Select Provider", padding=10)
+        provider_frame.pack(fill=tk.X, pady=(0, 15))
+        self.provider_var = tk.StringVar(value=self.chat_system.chat_provider)
+        ttk.Radiobutton(provider_frame, text="Google Gemini (Cloud)", variable=self.provider_var, value='gemini', command=self.on_provider_change).pack(anchor='w', pady=2)
+        ttk.Radiobutton(provider_frame, text="Ollama (Local)", variable=self.provider_var, value='ollama', command=self.on_provider_change).pack(anchor='w', pady=2)
+
+        # Gemini settings
+        self.gemini_frame = ttk.LabelFrame(content_frame, text="Google Gemini Settings", padding=10)
+        self.gemini_frame.pack(fill=tk.X, pady=(0, 15))
+        ttk.Label(self.gemini_frame, text="API Key:").pack(anchor='w')
+        self.api_key_entry = ttk.Entry(self.gemini_frame, show="*", font=('Courier', 9))
+        self.api_key_entry.pack(fill=tk.X, pady=5)
         if self.chat_system.api_key:
-            self.api_key_entry.insert("1.0", self.chat_system.api_key)
-        
-        button_frame = ttk.Frame(main_frame)
+            self.api_key_entry.insert(0, self.chat_system.api_key)
+        ttk.Label(self.gemini_frame, text="Model:").pack(anchor='w')
+        self.model_var = tk.StringVar(value=self.chat_system.selected_model)
+        self.gemini_model_menu = ttk.Combobox(self.gemini_frame, textvariable=self.model_var, values=list(AVAILABLE_MODELS.keys()), state="readonly")
+        self.gemini_model_menu.pack(fill=tk.X, pady=5)
+
+        # Ollama settings
+        self.ollama_frame = ttk.LabelFrame(content_frame, text="Ollama Settings", padding=10)
+        self.ollama_frame.pack(fill=tk.X, pady=(0, 15))
+        ttk.Label(self.ollama_frame, text="Make sure Ollama is running locally.", font=('Arial', 9), foreground='#666').pack(anchor='w')
+        ttk.Label(self.ollama_frame, text="Available Models:").pack(anchor='w', pady=(5,0))
+        self.ollama_models = self.chat_system.get_ollama_models()
+        self.ollama_model_var = tk.StringVar(value=self.chat_system.ollama_model)
+        if self.ollama_models:
+            self.ollama_model_menu = ttk.Combobox(self.ollama_frame, textvariable=self.ollama_model_var, values=self.ollama_models, state="readonly")
+            self.ollama_model_menu.pack(fill=tk.X, pady=5)
+        else:
+            ttk.Label(self.ollama_frame, text="No Ollama models found.", font=('Arial', 9), foreground='#ff6666').pack(anchor='w', pady=5)
+
+        # Instructions
+        self.instructions_label = ttk.Label(content_frame, text="", font=('Arial', 9), justify=tk.LEFT)
+        self.instructions_label.pack(fill=tk.X, pady=5)
+
+        # Buttons
+        button_frame = ttk.Frame(content_frame)
         button_frame.pack(fill=tk.X, pady=(10, 0))
-        
         from unified_ui import SimpleButton, COLORS
-        
-        cancel_button = SimpleButton(button_frame, text="Cancel", command=self.cancel,
-                                   bg=COLORS['error'], fg="white")
-        cancel_button.pack(side=tk.RIGHT, padx=(5, 0))
-        
-        save_button = SimpleButton(button_frame, text="Save & Test", command=self.save_and_test,
-                                 bg=COLORS['success'], fg="white")
+        save_button = SimpleButton(button_frame, text="Save & Test", command=self.save_and_test, bg=COLORS['success'], fg="white")
         save_button.pack(side=tk.RIGHT)
-        
-        self.api_key_entry.focus()
-        
+        cancel_button = SimpleButton(button_frame, text="Cancel", command=self.cancel, bg=COLORS['error'], fg="white")
+        cancel_button.pack(side=tk.RIGHT, padx=5)
+
+        self.on_provider_change()
         self.dialog.protocol("WM_DELETE_WINDOW", self.cancel)
     
-    def save_and_test(self):
-        api_key = self.api_key_entry.get("1.0", tk.END).strip()
+    def on_provider_change(self):
+        provider = self.provider_var.get()
         
-        if not api_key:
-            messagebox.showerror("Error", "Please enter an API key.")
-            return
-        
-        if self.chat_system.save_settings(api_key, self.chat_system.selected_model):
-            if self.chat_system.initialize_model():
-                messagebox.showinfo("Success", "API key saved and tested successfully!\nYou can now chat with your pet.")
-                self.dialog.destroy()
-                self.chat_system.show_chat_interface()
-            else:
-                messagebox.showerror("Error", "API key saved but failed to initialize. Please check your key and internet connection.")
+        if provider == 'gemini':
+            for child in self.gemini_frame.winfo_children():
+                child.config(state='normal')
+            for child in self.ollama_frame.winfo_children():
+                child.config(state='disabled')
+            instructions_text = """For Google Gemini:
+1. Go to https://makersuite.google.com/app/apikey
+2. Create an API key
+3. Paste it above
+4. Select your preferred model"""
         else:
-            messagebox.showerror("Error", "Failed to save API key.")
+            for child in self.ollama_frame.winfo_children():
+                child.config(state='normal')
+            for child in self.gemini_frame.winfo_children():
+                child.config(state='disabled')
+            instructions_text = """For Ollama:
+1. Install Ollama from https://ollama.ai
+2. Run: ollama serve
+3. Install models: ollama pull llama3.2
+4. Select a model above"""
+        
+        if hasattr(self, 'instructions_label'):
+            self.instructions_label.config(text=instructions_text)
     
-    def cancel(self):
-        self.dialog.destroy()
+    def save_and_test(self):
+        provider = self.provider_var.get()
+        
+        # Reset typing state when switching models
+        self.chat_system.reset_typing_state()
+        
+        if provider == 'gemini':
+            api_key = self.api_key_entry.get().strip()
+            if not api_key:
+                messagebox.showerror("Error", "Please enter a Google Gemini API key.")
+                return
+            
+            selected_model = self.model_var.get()
+            if self.chat_system.save_settings(api_key=api_key, selected_model=selected_model,
+                                            chat_provider='gemini'):
+                if self.chat_system.initialize_gemini_model():
+                    messagebox.showinfo("Success", "Gemini settings saved and tested successfully!")
+                    self.dialog.destroy()
+                    self.chat_system.create_chat_window()
+                else:
+                    messagebox.showerror("Error", "Failed to initialize Gemini. Please check your API key.")
+        
+        elif provider == 'ollama':
+            selected_model = self.ollama_model_var.get()
+            if not selected_model:
+                messagebox.showerror("Error", "Please select an Ollama model.")
+                return
+            
+            if self.chat_system.save_settings(chat_provider='ollama', ollama_model=selected_model):
+                messagebox.showinfo("Success", "Ollama settings saved successfully!")
+                self.dialog.destroy()
+                self.chat_system.create_chat_window()
+    

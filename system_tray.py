@@ -40,39 +40,37 @@ class SystemTrayMenu:
     @staticmethod
     def create_tray_icon(image_path=None):
         if image_path and os.path.exists(image_path):
-            return Image.open(image_path)
-        else:
-            icon_size = 64
-            icon = Image.new('RGBA', (icon_size, icon_size), (0, 0, 0, 0))
-            draw = ImageDraw.Draw(icon)
-            
-            center = icon_size // 2
-            radius = icon_size // 2 - 4
-            
-            for r in range(radius, 0, -1):
-                ratio = r / radius
-                r1, g1, b1 = int(COLORS['primary'][1:3], 16), int(COLORS['primary'][3:5], 16), int(COLORS['primary'][5:7], 16)
-                r2, g2, b2 = int(COLORS['primary_light'][1:3], 16), int(COLORS['primary_light'][3:5], 16), int(COLORS['primary_light'][5:7], 16)
-                
-                r_val = int(r1 * ratio + r2 * (1 - ratio))
-                g_val = int(g1 * ratio + g2 * (1 - ratio))
-                b_val = int(b1 * ratio + b2 * (1 - ratio))
-                
-                color = f'#{r_val:02x}{g_val:02x}{b_val:02x}'
-                draw.ellipse((center - r, center - r, center + r, center + r), fill=color)
-            
-            draw.ellipse((center - 12, center - 15, center + 12, center + 9), fill='white')
-            draw.ellipse((center - 7, center - 8, center - 3, center - 4), fill='black')
-            draw.ellipse((center + 3, center - 8, center + 7, center - 4), fill='black')
-            draw.arc((center - 5, center - 3, center + 5, center + 5), 0, 180, fill='black', width=2)
-            
-            return icon
+            try:
+                img = Image.open(image_path)
+                # Ensure image is in RGBA mode for transparency
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                return img
+            except Exception as e:
+                print(f"Error loading image for tray icon: {e}")
+                # Fallback to generic icon if image loading fails
+                pass
+        
+        # Generic fallback icon (simple circle)
+        icon_size = 64
+        icon = Image.new('RGBA', (icon_size, icon_size), (0, 0, 0, 0)) # Transparent background
+        draw = ImageDraw.Draw(icon)
+        
+        center = icon_size // 2
+        radius = icon_size // 2 - 4
+        
+        # Draw a simple red circle as a fallback
+        draw.ellipse((center - radius, center - radius, center + radius, center + radius), fill=(255, 0, 0, 255)) # Red circle
+        
+        return icon
 
 def create_context_menu(pet_manager, show_settings_func, exit_func):
     return SystemTrayMenu.create_menu_items(pet_manager, show_settings_func, exit_func)
 
 def setup_system_tray(pet_manager, show_settings_func, exit_func, icon_path='frames/Adult_Happy.png'):
-    icon_image = SystemTrayMenu.create_tray_icon(icon_path)
+    # Ensure the icon path is absolute
+    absolute_icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), icon_path)
+    icon_image = SystemTrayMenu.create_tray_icon(absolute_icon_path)
     
     def get_updated_menu():
         try:

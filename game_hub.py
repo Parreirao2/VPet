@@ -666,7 +666,8 @@ class BallClickerGame:
         self.canvas.create_text(canvas_width / 2, canvas_height / 2 + 30, text=stats_text, font=("Arial", 10), fill="blue", tags="stats_message")
 
 class GameHub:
-    def __init__(self, parent, currency_system, pet_state=None):
+    def __init__(self, parent, currency_system, pet_state=None, parent_window=None):
+        print(f"[DEBUG] GameHub.__init__: parent_window={'valid' if parent_window else 'None'}")
         self.window = tk.Toplevel(parent)
         self.window.title("Game Hub")
 
@@ -679,6 +680,21 @@ class GameHub:
         self.window.geometry(f"{width}x{height}")
         self.window.minsize(550, 500)
         self.window.configure(bg='#f0f0f0')
+        
+        # Position the window relative to the parent window if provided, otherwise use default positioning
+        if parent_window and parent_window.winfo_exists():
+            # Force update to ensure geometry info is up to date
+            parent_window.update_idletasks()
+            # Position to the right of the parent window
+            x = parent_window.winfo_x() + parent_window.winfo_width()
+            y = parent_window.winfo_y()
+            print(f"[DEBUG] Positioning game hub window relative to parent: x={x}, y={y}")
+            print(f"[DEBUG] Parent window geometry: x={parent_window.winfo_x()}, y={parent_window.winfo_y()}, width={parent_window.winfo_width()}, height={parent_window.winfo_height()}")
+            self.window.geometry(f"+{x}+{y}")
+            # Ensure the game hub window is on top of the parent window
+            self.window.attributes('-topmost', True)
+            # After a short delay, reset topmost to allow proper window layering
+            self.window.after(500, lambda: self.window.attributes('-topmost', False))
         
         try:
             import os
@@ -752,7 +768,7 @@ class GameHub:
         style = ttk.Style()
         style.configure("TNotebook", background="#f0f0f0", borderwidth=0)
         style.configure("TNotebook.Tab", background="#e0e0e0", padding=[15, 5], font=("Arial", 11))
-        style.map("TNotebook.Tab", background=[('selected', '#2196F3')], foreground=[('selected', 'white')])
+        style.map("TNotebook.Tab", background=[('selected', '#2196F3'), ('!selected', '#f0f0f0')], foreground=[('selected', '#000000'), ('!selected', '#333333')])  # Changed from white to black
         
         self.notebook.add(self.number_guesser_tab.frame, text="Number Guesser")
         self.notebook.add(self.reaction_test_tab.frame, text="Reaction Test")
