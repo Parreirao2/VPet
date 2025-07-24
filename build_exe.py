@@ -12,26 +12,43 @@ from pathlib import Path
 
 
 def create_icon():
-    """Create the executable icon from Adult_Walk1.png or a default if not found"""
+    """Create the executable icon from available pet images or a default"""
     icon_path = "icon.ico"
-    source_image_path = os.path.join("frames", "Adult_Walk1.png")
-
-    if os.path.exists(source_image_path):
+    
+    # Try different pet images in order of preference
+    preferred_images = [
+        "Adult_Happy.png",
+        "Adult_Walk1.png",
+        "Adult_Walk2.png",
+        "Child_Happy.png",
+        "Baby_Happy.png"
+    ]
+    
+    source_image_path = None
+    for img_name in preferred_images:
+        test_path = os.path.join("frames", img_name)
+        if os.path.exists(test_path):
+            source_image_path = test_path
+            break
+    
+    if source_image_path:
         print(f"📝 Creating icon from {source_image_path}...")
         try:
             from PIL import Image
             img = Image.open(source_image_path)
-            # Resize to a common icon size, e.g., 256x256, and save as .ico
-            img.thumbnail((256, 256), Image.LANCZOS)
-            img.save(icon_path, format='ICO')
-            print(f"✅ Created icon: {icon_path}")
+            # Convert to RGBA if not already
+            if img.mode != 'RGBA':
+                img = img.convert('RGBA')
+            # Resize to a proper icon size (multiple sizes for compatibility)
+            img.save(icon_path, format='ICO', sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)])
+            print(f"✅ Created multi-size icon: {icon_path}")
             return True
         except Exception as e:
             print(f"⚠️ Could not create icon from {source_image_path}: {e}")
             # Fallback to default icon creation if specific image fails
             return _create_default_icon(icon_path)
     else:
-        print(f"⚠️ {source_image_path} not found. Creating default icon...")
+        print(f"⚠️ No suitable pet image found. Creating default icon...")
         return _create_default_icon(icon_path)
 
 def _create_default_icon(icon_path):
@@ -84,7 +101,12 @@ def build_executable():
         'google.generativeai',
         'pystray._win32',
         'tkinter',
-        'tkinter.ttk'
+        'tkinter.ttk',
+        'requests',
+        'urllib3',
+        'json',
+        'threading',
+        'queue'
     ]
     
     for import_name in hidden_imports:
@@ -145,9 +167,10 @@ Simply double-click on `VirtualPet.exe` to start your virtual pet!
 - Virtual pet that lives on your desktop
 - Feed, play, and care for your pet
 - Mini-games to earn coins
-- AI chat system (requires Google Gemini API key)
+- AI chat system with Google Gemini OR local Ollama
 - Evolution system through different life stages
 - Customizable appearance and behavior
+- System tray integration
 
 ## First Time Setup
 1. Run VirtualPet.exe
@@ -155,23 +178,33 @@ Simply double-click on `VirtualPet.exe` to start your virtual pet!
 3. Right-click on your pet to access the menu
 4. Go to Settings to customize your pet
 
-## AI Chat (Optional)
-To enable AI chat with your pet:
+## AI Chat Options
+
+### Option 1: Google Gemini (Cloud AI)
 1. Get a free Google Gemini API key from: https://makersuite.google.com/app/apikey
 2. Right-click your pet → Chat with Pet
 3. Enter your API key when prompted
+
+### Option 2: Ollama (Local AI - Privacy Focused)
+1. Download and install Ollama from: https://ollama.ai
+2. Install a model: `ollama pull llama3.2` or `ollama pull mistral`
+3. Right-click your pet → Chat with Pet
+4. Select "Ollama" as your provider
+5. Choose your installed model
 
 ## System Tray
 Look for the pet icon in your system tray (bottom-right corner) to access:
 - Settings
 - Stats
 - Save/Load options
+- Chat with Pet
 - Exit
 
 ## Troubleshooting
 - If the pet doesn't appear, check your system tray
 - Make sure all files are in the same folder as VirtualPet.exe
 - Windows may show a security warning - click "More info" then "Run anyway"
+- For Ollama: Ensure Ollama is running in the background
 
 Enjoy your virtual pet companion! 🐾
 """
