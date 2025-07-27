@@ -140,8 +140,18 @@ python main.py
 | **🎲 Number Guesser** | Logic | 1-7+ coins | 7+ per level |
 | **⚡ Reaction Test** | Speed | 1-7+ coins | 7+ per level |
 | **🎯 Ball Clicker** | Precision | 1-7+ coins | 7+ per level |
+| **🎰 Slot Machine** | Luck | 0-1000 coins | 1000 (Jackpot) |
 
 </div>
+
+### **🎰 Slot Machine Details**
+- **Cost**: 5 coins per spin
+- **💰 Jackpot**: Three 💰 symbols = 1000 coins
+- **💰 Money Symbols**: Each 💰 = 50 coins (1% spawn chance)
+- **🍎 Three of a Kind**: 15-20 coins
+- **🍎 Two of a Kind**: 15-20 coins  
+- **🍎 No Match**: 0-5 coins
+- **Symbols**: Various fruit emojis (🍒🍋🍊🍇🍉🍎🍓🍑🥝🍍🥭🥥🫐🍈🍌) + rare 💰
 
 ---
 
@@ -191,8 +201,6 @@ VPet/
 ├── ⚙️ unified_ui.py        # Modern UI components & settings
 ├── 🎨 ui_components.py     # UI utilities & helpers
 ├── 🚀 startup_manager.py   # Windows startup integration
-├── 🏗️ build_exe.py        # Executable builder
-├── 📋 build_vpet.spec     # PyInstaller specification
 ├── 📝 requirements.txt    # Python dependencies
 ├── 📄 LICENSE             # MIT License
 └── 📖 README.md           # This file
