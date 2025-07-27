@@ -275,12 +275,14 @@ class PetAnimation:
                 # Ensure sleep animation is active
                 if self.pet_state.current_animation != 'sleeping':
                     self.pet_state.current_animation = 'sleeping'
-                # Show sickness overlay if sick, but don't change animation
-                if is_sick and not self.sickness_icon_id:
-                    self.show_sickness_overlay()
-                elif not is_sick and self.sickness_icon_id:
-                    self.hide_sickness_overlay()
-            elif is_sick and not is_sleeping:
+                # Always show sickness overlay if sick during sleep
+                if is_sick:
+                    if not self.sickness_icon_id:
+                        self.show_sickness_overlay()
+                else:
+                    if self.sickness_icon_id:
+                        self.hide_sickness_overlay()
+            elif is_sick:
                 # Only show sick animation when not sleeping
                 if self.pet_state.current_animation != 'sick':
                     self.pet_state.current_animation = 'sick'
@@ -457,9 +459,10 @@ class PetAnimation:
                 
                 # Avoid the top area if context awareness is active to prevent conflicts with speech bubbles
                 min_y = 0
-                if (hasattr(self.pet_state, 'context_awareness') and 
-                    hasattr(self.pet_state.context_awareness, 'monitoring_enabled') and
-                    self.pet_state.context_awareness.monitoring_enabled):
+                if (hasattr(self.pet_state, 'pet_manager') and
+                    hasattr(self.pet_state.pet_manager, 'context_awareness') and
+                    hasattr(self.pet_state.pet_manager.context_awareness, 'monitoring_enabled') and
+                    self.pet_state.pet_manager.context_awareness.monitoring_enabled):
                     min_y = 150  # Keep pet away from top 150px when context awareness is active
                 
                 self.target_x = random.randint(0, screen_width - 256)
@@ -557,9 +560,7 @@ class PetAnimation:
             self.start_random_movement()
     
     def force_restart_movement(self):
-        print(f"[DEBUG] force_restart_movement called - current_animation: {self.pet_state.current_animation}, is_sleeping: {getattr(self.pet_state, 'is_sleeping', False)}")
         if getattr(self.pet_state, 'is_sleeping', False) or self.pet_state.current_animation == 'sleeping':
-            print(f"[DEBUG] Preventing force_restart_movement during sleep")
             return
             
         if self.movement_timer:
@@ -581,11 +582,8 @@ class PetAnimation:
     
     def start_movement_watchdog(self):
         def check_movement():
-            print(f"[DEBUG] Movement watchdog check - is_interacting: {self.pet_state.is_interacting}, current_animation: {self.pet_state.current_animation}, movement_timer: {self.movement_timer}, is_sleeping: {getattr(self.pet_state, 'is_sleeping', False)}")
-            
             # Skip all movement restart logic if pet is sleeping
             if getattr(self.pet_state, 'is_sleeping', False) or self.pet_state.current_animation == 'sleeping':
-                print(f"[DEBUG] Movement watchdog detected sleeping state - skipping restart")
                 self.root.after(15000, check_movement)
                 return
                 
@@ -593,7 +591,6 @@ class PetAnimation:
                 self.pet_state.current_animation == 'Standing' and
                 not self.movement_timer):
                 
-                print(f"[DEBUG] Movement watchdog triggering force_restart_movement")
                 self.force_restart_movement()
             
             self.root.after(15000, check_movement)
@@ -601,9 +598,7 @@ class PetAnimation:
         self.root.after(15000, check_movement)
     
     def schedule_resume_movement(self, delay_ms):
-        print(f"[DEBUG] schedule_resume_movement called with delay: {delay_ms}ms, is_sleeping: {getattr(self.pet_state, 'is_sleeping', False)}")
         if getattr(self.pet_state, 'is_sleeping', False):
-            print(f"[DEBUG] Skipping resume movement due to sleep state")
             return
         if self.resume_timer:
             self.root.after_cancel(self.resume_timer)

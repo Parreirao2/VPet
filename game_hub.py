@@ -84,7 +84,7 @@ class NumberGuesserGame:
             max_number = 10 + (self.level - 1)
             
             if self.pet_state and hasattr(self.pet_state, 'stats'):
-                self.pet_state.stats.modify_stat('energy', -2)
+                self.pet_state.stats.modify_stat('energy', -0.5)
             
             self.entry.delete(0, 'end')
             
@@ -288,7 +288,7 @@ class ReactionTestGame:
             return
             
         if self.pet_state and hasattr(self.pet_state, 'stats'):
-            self.pet_state.stats.modify_stat('energy', -3)
+            self.pet_state.stats.modify_stat('energy', -1.5)
             
         self.ready_to_click = False
         reaction_time = time.time() - self.start_time
@@ -493,7 +493,7 @@ class BallClickerGame:
             return
             
         if self.pet_state and hasattr(self.pet_state, 'stats'):
-            self.pet_state.stats.modify_stat('energy', -1)
+            self.pet_state.stats.modify_stat('energy', -0.5)
             
         self.remove_ball(ball)
         
@@ -665,11 +665,215 @@ class BallClickerGame:
         self._last_stats_text = stats_text
         self.canvas.create_text(canvas_width / 2, canvas_height / 2 + 30, text=stats_text, font=("Arial", 10), fill="blue", tags="stats_message")
 
+class SlotMachineGame:
+    def __init__(self, parent, currency_system, pet_state=None):
+        self.frame = ttk.Frame(parent)
+        self.currency_system = currency_system
+        self.pet_state = pet_state
+        self.rolling = False
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.title_label = ttk.Label(self.frame, text="Slot Machine", font=("Arial", 16, "bold"), foreground="#2196F3")
+        self.title_label.pack(pady=(10, 5))
+        
+        self.reward_frame = ttk.Frame(self.frame)
+        self.reward_frame.pack(pady=(5, 10))
+        
+        self.currency_icon = None
+        try:
+            import os
+            from PIL import Image, ImageTk
+            img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'img_assets', 'currency.png')
+            if os.path.exists(img_path):
+                img = Image.open(img_path).convert("RGBA")
+                img = img.resize((16, 16), Image.LANCZOS)
+                self.currency_icon = ImageTk.PhotoImage(img)
+        except Exception as e:
+            print(f"Error loading currency icon: {e}")
+        
+        if self.currency_icon:
+            self.icon_label = ttk.Label(self.reward_frame, image=self.currency_icon)
+            self.icon_label.pack(side='left', padx=(0, 5))
+        
+        self.reward_label = ttk.Label(self.reward_frame, text="Reward: 0-1000 coins", font=("Arial", 10, "bold"))
+        self.reward_label.pack(side='left')
+        
+        self.game_container = ttk.Frame(self.frame, padding=15, relief="groove")
+        self.game_container.pack(fill='both', expand=True, padx=20, pady=10)
+        
+        # Slot machine display
+        self.slot_frame = ttk.Frame(self.game_container)
+        self.slot_frame.pack(pady=20)
+        
+        # Create slot display labels
+        self.slot_labels = []
+        for i in range(3):
+            slot_label = tk.Label(self.slot_frame,
+                                 text="❓",
+                                 font=("Arial", 40, "bold"),
+                                 bg="white",  # Changed from #f0f0f0 to white
+                                 relief=tk.RAISED,
+                                 bd=3,
+                                 width=3,
+                                 height=2)
+            slot_label.pack(side='left', padx=5)
+            self.slot_labels.append(slot_label)
+        
+        # Result display
+        self.result_label = ttk.Label(self.game_container,
+                                     text="",
+                                     font=("Arial", 12, "bold"),
+                                     foreground="#1976D2")
+        self.result_label.pack(pady=10)
+        
+        # Spin button
+        self.spin_button = tk.Button(self.game_container,
+                                   text="Spin (Cost: 5 coins)",
+                                   command=self.spin,
+                                   font=("Arial", 12, "bold"),
+                                   bg="white",  # Changed from #4CAF50 to white
+                                   fg="black",  # Changed text color to black for better contrast
+                                   padx=20,
+                                   pady=10,
+                                   relief=tk.RAISED,
+                                   borderwidth=2)
+        self.spin_button.pack(pady=20)
+        
+        # Instructions
+        self.instructions_label = ttk.Label(self.game_container,
+                                           text="Get 3 💰 for 1000 coins!\nEach 💰 gives 50 coins!\nOther combinations pay 0-20 coins.",
+                                           font=("Arial", 10),
+                                           justify="center",
+                                           foreground="#666666")
+        self.instructions_label.pack(pady=10)
+
+    def spin(self):
+        if self.rolling:
+            return
+            
+        # Check if player has enough coins
+        if self.currency_system.get_currency() < 5:
+            self.result_label.config(text="Not enough coins!", foreground="red")
+            return
+            
+        # Deduct 5 coins for the spin
+        self.currency_system.remove_currency(5)
+        
+        # Update UI to show coin deduction
+        if hasattr(self.frame.winfo_toplevel(), 'update_currency_display'):
+            self.frame.winfo_toplevel().update_currency_display()
+        
+        self.rolling = True
+        self.spin_button.config(state='disabled', text="Spinning...")
+        self.result_label.config(text="", foreground="#1976D2")
+        
+        # Start rolling animation
+        self.roll_count = 0
+        self.animate_rolling()
+
+    def animate_rolling(self):
+        if not self.rolling:
+            return
+            
+        # Emojis for slots
+        emojis = ["🍒", "🍋", "🍊", "🍇", "🍉", "🍎", "🍓", "🍑", "🥝", "🍍", "🥭", "🥥", "🫐", "🍈", "🍌"]
+        
+        # Update slot displays with random emojis
+        for label in self.slot_labels:
+            label.config(text=random.choice(emojis))
+        
+        self.roll_count += 1
+        
+        # Continue animation for a random duration
+        if self.roll_count < random.randint(15, 25):
+            self.frame.after(100, self.animate_rolling)
+        else:
+            # Animation finished, show final result
+            self.show_result()
+
+    def show_result(self):
+        self.rolling = False
+        self.spin_button.config(state='normal', text="Spin (Cost: 5 coins)")
+        
+        # Emojis for slots (including the special money emoji)
+        emojis = ["🍒", "🍋", "🍊", "🍇", "🍉", "🍎", "🍓", "🍑", "🥝", "🍍", "🥭", "🥥", "🫐", "🍈", "🍌", "💰"]
+        
+        # Generate final slot results
+        # Very low probability (1%) for money emoji
+        final_emojis = []
+        for i in range(3):
+            if random.random() < 0.01:  # 1% chance for money emoji
+                final_emojis.append("💰")
+            else:
+                final_emojis.append(random.choice(emojis[:-1]))  # Any other emoji
+        
+        # Update slot displays with final results
+        for i, label in enumerate(self.slot_labels):
+            label.config(text=final_emojis[i])
+        
+        # Calculate reward
+        reward = 0
+        
+        # Count money emojis
+        money_count = final_emojis.count("💰")
+        
+        if final_emojis == ["💰", "💰", "💰"]:
+            reward = 1000  # Jackpot!
+            self.result_label.config(text="JACKPOT! 1000 coins! 🎉💰", foreground="gold")
+        else:
+            # Add 50 coins for each money emoji
+            reward += money_count * 50
+            
+            # Add regular rewards based on combinations
+            if len(set(final_emojis)) == 1:  # All three emojis are the same (but not money)
+                regular_reward = random.randint(15, 20)
+                reward += regular_reward
+                self.result_label.config(text=f"Three of a kind! {reward} coins! 🎉", foreground="green")
+            elif len(set(final_emojis)) == 2:  # Two emojis are the same
+                regular_reward = random.randint(15, 20)  # Minimum 15 coins for 2 of a kind
+                reward += regular_reward
+                self.result_label.config(text=f"Two of a kind! {reward} coins!", foreground="#1976D2")
+            else:  # All different
+                regular_reward = random.randint(0, 5)
+                reward += regular_reward
+                if reward > 0:
+                    self.result_label.config(text=f"Nice try! {reward} coins!", foreground="#4CAF50")
+                else:
+                    self.result_label.config(text="No luck this time!", foreground="#9E9E9E")
+        
+        # Add reward to currency
+        if reward > 0:
+            self.currency_system.add_currency(reward)
+            # Update UI to show coin addition
+            if hasattr(self.frame.winfo_toplevel(), 'update_currency_display'):
+                self.frame.winfo_toplevel().update_currency_display()
+        
+        # Handle pet interaction
+        if self.pet_state and hasattr(self.pet_state, 'pet_manager'):
+            self.pet_state.pet_manager.handle_interaction('play')
+
 class GameHub:
     def __init__(self, parent, currency_system, pet_state=None, parent_window=None):
-        print(f"[DEBUG] GameHub.__init__: parent_window={'valid' if parent_window else 'None'}")
         self.window = tk.Toplevel(parent)
         self.window.title("Game Hub")
+        
+        # Store pet_state for continuous monitoring
+        self.pet_state = pet_state
+        self.energy_check_active = True  # Flag to control energy monitoring
+
+        # Check if pet is too tired to play games (energy at or below 5%)
+        if pet_state and hasattr(pet_state, 'stats'):
+            energy_level = float(pet_state.stats.get_stat('energy'))
+            # Use <= 5 instead of < 5 to include exactly 5% energy
+            if energy_level <= 5.0:
+                # Show tired message instead of games
+                self.show_tired_message()
+                return
+            else:
+                pass
+        else:
+            pass
 
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
@@ -688,8 +892,6 @@ class GameHub:
             # Position to the right of the parent window
             x = parent_window.winfo_x() + parent_window.winfo_width()
             y = parent_window.winfo_y()
-            print(f"[DEBUG] Positioning game hub window relative to parent: x={x}, y={y}")
-            print(f"[DEBUG] Parent window geometry: x={parent_window.winfo_x()}, y={parent_window.winfo_y()}, width={parent_window.winfo_width()}, height={parent_window.winfo_height()}")
             self.window.geometry(f"+{x}+{y}")
             # Ensure the game hub window is on top of the parent window
             self.window.attributes('-topmost', True)
@@ -764,6 +966,7 @@ class GameHub:
         self.number_guesser_tab = self.create_number_guesser_game(saved_levels.get('number_guesser', 1))
         self.reaction_test_tab = self.create_reaction_test_game(saved_levels.get('reaction_test', 1))
         self.ball_clicker_tab = self.create_ball_clicker_game(saved_levels.get('ball_clicker', 1))
+        self.slot_machine_tab = self.create_slot_machine_game()
         
         style = ttk.Style()
         style.configure("TNotebook", background="#f0f0f0", borderwidth=0)
@@ -773,6 +976,7 @@ class GameHub:
         self.notebook.add(self.number_guesser_tab.frame, text="Number Guesser")
         self.notebook.add(self.reaction_test_tab.frame, text="Reaction Test")
         self.notebook.add(self.ball_clicker_tab.frame, text="Ball Clicker")
+        self.notebook.add(self.slot_machine_tab.frame, text="Slot Machine")
         
         self.notebook.pack(expand=1, fill='both', padx=5, pady=5)
         
@@ -789,6 +993,216 @@ class GameHub:
         self.instructions_label.pack(fill='x')
         
         self.update_currency_display()
+        
+        # Start continuous energy monitoring
+        self.start_energy_monitoring()
+        
+        # Handle window close event to stop energy monitoring
+        self.window.protocol("WM_DELETE_WINDOW", self.on_window_close)
+    
+    def start_energy_monitoring(self):
+        """Start continuous monitoring of pet energy levels"""
+        if self.energy_check_active:
+            self.check_energy_level()
+            # Schedule next check in 2 seconds
+            self.window.after(2000, self.start_energy_monitoring)
+    
+    def check_energy_level(self):
+        """Check if pet energy has dropped below 5% and close game hub if so"""
+        if not self.energy_check_active:
+            return
+            
+        if self.pet_state and hasattr(self.pet_state, 'stats'):
+            try:
+                energy_level = float(self.pet_state.stats.get_stat('energy'))
+                
+                if energy_level <= 5.0:
+                    self.energy_check_active = False  # Stop further monitoring
+                    
+                    # Disable all game interactions immediately
+                    self.disable_all_games()
+                    
+                    # Show tired message and automatically close game hub
+                    self.show_energy_depleted_message()
+                    
+            except Exception as e:
+                pass
+
+    def disable_all_games(self):
+        """Disable all game interactions when energy is too low"""
+        try:
+            # Disable individual game components if they exist
+            if hasattr(self, 'number_guesser_tab'):
+                self.disable_game_tab(self.number_guesser_tab)
+            if hasattr(self, 'reaction_test_tab'):
+                self.disable_game_tab(self.reaction_test_tab)
+            if hasattr(self, 'ball_clicker_tab'):
+                self.disable_game_tab(self.ball_clicker_tab)
+            if hasattr(self, 'slot_machine_tab'):
+                self.disable_game_tab(self.slot_machine_tab)
+                
+        except Exception as e:
+            pass
+    
+    def disable_game_tab(self, game_tab):
+        """Disable all interactive elements in a game tab"""
+        try:
+            if hasattr(game_tab, 'frame'):
+                # Recursively disable all children widgets
+                self.disable_widget_children(game_tab.frame)
+        except Exception as e:
+            pass
+    
+    def disable_widget_children(self, widget):
+        """Recursively disable all children of a widget"""
+        try:
+            for child in widget.winfo_children():
+                # Disable buttons, entries, and other interactive widgets
+                widget_type = child.winfo_class()
+                if widget_type in ['Button', 'Entry', 'Text', 'Listbox', 'Scale', 'Spinbox']:
+                    try:
+                        child.configure(state='disabled')
+                    except tk.TclError:
+                        pass  # Some widgets don't support state='disabled'
+                elif widget_type == 'Canvas':
+                    try:
+                        child.configure(state='disabled')
+                    except tk.TclError:
+                        # For Canvas widgets that don't support state, unbind events
+                        child.unbind('<Button-1>')
+                        child.unbind('<ButtonPress-1>')
+                        child.unbind('<ButtonRelease-1>')
+                
+                # Recursively disable children
+                self.disable_widget_children(child)
+        except Exception as e:
+            pass
+    
+    def show_energy_depleted_message(self):
+        """Show message when energy drops below 5% during gameplay and close game hub"""
+        # Get pet name - try to access through pet_state's pet_manager, fallback to "Your pet"
+        pet_name = "Your pet"
+        if hasattr(self.pet_state, 'pet_manager') and hasattr(self.pet_state.pet_manager, 'name'):
+            pet_name = self.pet_state.pet_manager.name
+        
+        # Create a temporary message window with larger size
+        message_window = tk.Toplevel(self.window)
+        message_window.title("Pet Tired")
+        message_window.geometry("500x250")  # Increased size to accommodate text
+        message_window.configure(bg='#f0f0f0')
+        message_window.resizable(False, False)
+        message_window.transient(self.window)
+        message_window.grab_set()
+        
+        # Prevent closing the message window without clicking OK
+        message_window.protocol("WM_DELETE_WINDOW", lambda: None)
+        
+        # Center the message window
+        message_window.update_idletasks()
+        x = (message_window.winfo_screenwidth() // 2) - (500 // 2)  # Updated for new width
+        y = (message_window.winfo_screenheight() // 2) - (250 // 2)  # Updated for new height
+        message_window.geometry(f"500x250+{x}+{y}")
+        
+        main_frame = tk.Frame(message_window, bg='#f0f0f0', padx=30, pady=25)  # Increased padding
+        main_frame.pack(fill='both', expand=True)
+        
+        # Tired pet icon/emoji
+        tired_label = tk.Label(main_frame, 
+                              text="😴💤", 
+                              font=("Arial", 48),
+                              bg='#f0f0f0')
+        tired_label.pack(pady=(10, 20))
+        
+        # Message with pet name - FIXED: Larger window and better text wrapping
+        message_text = f"{pet_name} got too tired while playing!\nThe game hub will now close."
+        message_label = tk.Label(main_frame,
+                                text=message_text,
+                                font=("Arial", 16, "bold"),  # Increased font size
+                                bg='#f0f0f0',
+                                fg='#000000',  # Black text for readability
+                                justify='center',
+                                wraplength=450)  # Increased wrap length for larger window
+        message_label.pack(pady=15)  # Increased padding
+        
+        # Close button that closes both the message and game hub
+        def close_all():
+            message_window.destroy()
+            self.window.destroy()
+        
+        close_button = tk.Button(main_frame,
+                               text="OK",
+                               command=close_all,
+                               font=("Arial", 14, "bold"),  # Increased button font size
+                               bg="#2196F3",
+                               fg="white",
+                               padx=25,
+                               pady=8,
+                               relief=tk.RAISED,
+                               borderwidth=2)
+        close_button.pack(pady=20)
+        
+        # Auto-close after 5 seconds if user doesn't respond
+        message_window.after(5000, close_all)
+
+    
+    def show_tired_message(self):
+        """Show a message when the pet is too tired to play games"""
+        # Get pet name - try to access through pet_state's pet_manager, fallback to "Your pet"
+        pet_name = "Your pet"
+        if hasattr(self.pet_state, 'pet_manager') and hasattr(self.pet_state.pet_manager, 'name'):
+            pet_name = self.pet_state.pet_manager.name
+        
+        self.window.geometry("500x300")  # Increased height from 250 to 300
+        self.window.configure(bg='#f0f0f0')
+        self.window.resizable(False, False)
+        
+        # Center the window on screen
+        self.window.update_idletasks()
+        x = (self.window.winfo_screenwidth() // 2) - (500 // 2)
+        y = (self.window.winfo_screenheight() // 2) - (300 // 2)  # Updated for new height
+        self.window.geometry(f"500x300+{x}+{y}")
+        
+        main_frame = tk.Frame(self.window, bg='#f0f0f0', padx=30, pady=20)  # Reduced padding slightly
+        main_frame.pack(fill='both', expand=True)
+        
+        # Tired pet icon/emoji
+        tired_label = tk.Label(main_frame, 
+                              text="😴💤", 
+                              font=("Arial", 40),  # Reduced emoji size slightly
+                              bg='#f0f0f0')
+        tired_label.pack(pady=(5, 15))  # Reduced top/bottom padding
+        
+        # Message with pet name - FIXED: Better spacing and layout
+        message_text = f"{pet_name} is too tired...\nPlease rest for a little before continuing playing"
+        message_label = tk.Label(main_frame,
+                                text=message_text,
+                                font=("Arial", 14, "bold"),  # Slightly smaller font
+                                bg='#f0f0f0',
+                                fg='#000000',  # Black text for readability
+                                justify='center',
+                                wraplength=420)  # Adjusted wrap length
+        message_label.pack(pady=10)  # Reduced padding
+        
+        # Close button
+        close_button = tk.Button(main_frame,
+                               text="OK",
+                               command=self.window.destroy,
+                               font=("Arial", 12, "bold"),  # Slightly smaller button font
+                               bg="#2196F3",
+                               fg="white",
+                               padx=20,
+                               pady=6,
+                               relief=tk.RAISED,
+                               borderwidth=2)
+        close_button.pack(pady=15)  # Reduced padding
+
+    
+    def on_window_close(self):
+        """Handle window close event"""
+        self.energy_check_active = False  # Stop energy monitoring
+        self.window.destroy()
+
+
     
     def create_number_guesser_game(self, level=1):
         game = NumberGuesserGame(self.notebook, self.currency_system, self.pet_state)
@@ -822,6 +1236,10 @@ class GameHub:
         batch_number = (game.level - 1) // 3
         base_reward = 1 + 2 * batch_number
         game.reward_label.config(text=f"Reward: {base_reward} coins")
+        return game
+    
+    def create_slot_machine_game(self):
+        game = SlotMachineGame(self.notebook, self.currency_system, self.pet_state)
         return game
     
     def update_currency_display(self):

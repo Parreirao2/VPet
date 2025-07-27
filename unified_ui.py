@@ -6,7 +6,9 @@ import random
 import os
 from datetime import datetime
 import threading
+import webbrowser  # Add this import for opening URLs
 from startup_manager import StartupManager
+import json
 
 COLORS = {
     'primary': '#4a6baf',
@@ -330,7 +332,152 @@ class SimpleSettingsWindow:
             
         speed_slider.bind("<Motion>", update_speed_label)
         speed_slider.bind("<ButtonRelease-1>", update_speed_label)
-    
+        
+        # Add Credits section
+        credits_frame = ttk.LabelFrame(parent, text="About", padding=10)
+        credits_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        credits_btn = SimpleButton(credits_frame, text="Credits", command=self.show_credits)
+        credits_btn.pack(pady=5)
+
+    def show_credits(self):
+        """Display credits information in a beautiful popup with clickable links"""
+        # Create credits window
+        credits_window = tk.Toplevel(self.window)
+        credits_window.title("Credits")
+        credits_window.geometry("500x400")
+        credits_window.resizable(False, False)
+        credits_window.configure(bg=COLORS['background'])
+        credits_window.attributes('-topmost', True)
+        
+        # Center the window
+        credits_window.transient(self.window)
+        credits_window.grab_set()
+        
+        # Position relative to parent window
+        x = self.window.winfo_x() + (self.window.winfo_width() - 500) // 2
+        y = self.window.winfo_y() + (self.window.winfo_height() - 400) // 2
+        credits_window.geometry(f"+{x}+{y}")
+        
+        # Main frame with rounded corners
+        main_frame = RoundedFrame(credits_window, bg=COLORS['surface'], corner_radius=15)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # Title
+        title_label = tk.Label(main_frame, text="🎮 VPet Credits", 
+                              font=("Arial", 18, "bold"), 
+                              bg=COLORS['surface'], 
+                              fg=COLORS['primary'])
+        title_label.pack(pady=(20, 30))
+        
+        # Content frame
+        content_frame = tk.Frame(main_frame, bg=COLORS['surface'])
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=30)
+        
+        # Game Developer Section
+        dev_frame = tk.Frame(content_frame, bg=COLORS['surface'])
+        dev_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        dev_title = tk.Label(dev_frame, text="🧑‍💻 Game Developer:", 
+                            font=("Arial", 12, "bold"), 
+                            bg=COLORS['surface'], 
+                            fg=COLORS['text'])
+        dev_title.pack(anchor="w")
+        
+        dev_name = tk.Label(dev_frame, text="Diogo Parreirão", 
+                           font=("Arial", 11), 
+                           bg=COLORS['surface'], 
+                           fg=COLORS['text'])
+        dev_name.pack(anchor="w", padx=(20, 0))
+        
+        # GitHub link
+        github_link = tk.Label(dev_frame, text="🔗 GitHub Repository", 
+                              font=("Arial", 10, "underline"), 
+                              bg=COLORS['surface'], 
+                              fg=COLORS['primary'], 
+                              cursor="hand2")
+        github_link.pack(anchor="w", padx=(20, 0), pady=(5, 0))
+        github_link.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/Parreirao2/VPet"))
+        
+        # Assets Section
+        assets_frame = tk.Frame(content_frame, bg=COLORS['surface'])
+        assets_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        assets_title = tk.Label(assets_frame, text="🎨 Assets:", 
+                               font=("Arial", 12, "bold"), 
+                               bg=COLORS['surface'], 
+                               fg=COLORS['text'])
+        assets_title.pack(anchor="w")
+        
+        assets_name = tk.Label(assets_frame, text="Pixelrepo", 
+                              font=("Arial", 11), 
+                              bg=COLORS['surface'], 
+                              fg=COLORS['text'])
+        assets_name.pack(anchor="w", padx=(20, 0))
+        
+        # Pixelrepo link
+        pixelrepo_link = tk.Label(assets_frame, text="🔗 Visit Pixelrepo", 
+                                 font=("Arial", 10, "underline"), 
+                                 bg=COLORS['surface'], 
+                                 fg=COLORS['primary'], 
+                                 cursor="hand2")
+        pixelrepo_link.pack(anchor="w", padx=(20, 0), pady=(5, 0))
+        pixelrepo_link.bind("<Button-1>", lambda e: webbrowser.open("https://pixelrepo.com"))
+        
+        # Special Thanks Section
+        thanks_frame = tk.Frame(content_frame, bg=COLORS['surface'])
+        thanks_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        thanks_title = tk.Label(thanks_frame, text="💝 Special Thanks:", 
+                               font=("Arial", 12, "bold"), 
+                               bg=COLORS['surface'], 
+                               fg=COLORS['text'])
+        thanks_title.pack(anchor="w")
+        
+        thanks_name = tk.Label(thanks_frame, text="My Girlfriend Inês H.", 
+                              font=("Arial", 11), 
+                              bg=COLORS['surface'], 
+                              fg=COLORS['text'])
+        thanks_name.pack(anchor="w", padx=(20, 0))
+        
+        # Separator line
+        separator = tk.Frame(content_frame, height=2, bg=COLORS['primary'])
+        separator.pack(fill=tk.X, pady=20)
+        
+        # Version info
+        version_label = tk.Label(content_frame, text="VPet - Virtual Pet Desktop Companion", 
+                                font=("Arial", 9, "italic"), 
+                                bg=COLORS['surface'], 
+                                fg=COLORS['text_light'])
+        version_label.pack()
+        
+        # Close button
+        button_frame = tk.Frame(main_frame, bg=COLORS['surface'])
+        button_frame.pack(fill=tk.X, pady=(20, 20))
+        
+        close_btn = SimpleButton(button_frame, text="Close", 
+                                command=credits_window.destroy,
+                                bg=COLORS['primary'], 
+                                fg="white",
+                                width=12)
+        close_btn.pack()
+        
+        # Add hover effects for links
+        def on_link_enter(event, label):
+            label.config(fg=COLORS['primary_light'])
+        
+        def on_link_leave(event, label):
+            label.config(fg=COLORS['primary'])
+        
+        # Bind hover effects
+        github_link.bind("<Enter>", lambda e: on_link_enter(e, github_link))
+        github_link.bind("<Leave>", lambda e: on_link_leave(e, github_link))
+        pixelrepo_link.bind("<Enter>", lambda e: on_link_enter(e, pixelrepo_link))
+        pixelrepo_link.bind("<Leave>", lambda e: on_link_leave(e, pixelrepo_link))
+        
+        # Handle window close
+        credits_window.protocol("WM_DELETE_WINDOW", credits_window.destroy)
+
     def _create_save_tab(self, parent):
         save_frame = ttk.LabelFrame(parent, text="Save Pet", padding=10)
         save_frame.pack(fill=tk.X, padx=10, pady=10)
@@ -349,30 +496,49 @@ class SimpleSettingsWindow:
         scrollbar = ttk.Scrollbar(list_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        save_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set, 
-                                  bg=COLORS['surface'], fg=COLORS['text'],
-                                  selectbackground=COLORS['primary'],
-                                  selectforeground="white")
-        save_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Create a Treeview for better organization
+        columns = ('filename', 'pet_name', 'stage', 'age', 'currency', 'save_date')
+        save_treeview = ttk.Treeview(list_frame, columns=columns, show='headings', yscrollcommand=scrollbar.set)
         
-        scrollbar.config(command=save_listbox.yview)
+        # Configure column headings
+        save_treeview.heading('filename', text='File')
+        save_treeview.heading('pet_name', text='Pet Name')
+        save_treeview.heading('stage', text='Stage')
+        save_treeview.heading('age', text='Age (days)')
+        save_treeview.heading('currency', text='Coins')
+        save_treeview.heading('save_date', text='Last Saved')
         
-        self.save_listbox = save_listbox
+        # Configure column widths
+        save_treeview.column('filename', width=120)
+        save_treeview.column('pet_name', width=100)
+        save_treeview.column('stage', width=80)
+        save_treeview.column('age', width=80)
+        save_treeview.column('currency', width=80)
+        save_treeview.column('save_date', width=140)
         
-        for save_file in self.pet_manager.get_save_files():
-            save_listbox.insert(tk.END, save_file)
+        save_treeview.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=save_treeview.yview)
+        
+        self.save_treeview = save_treeview
+        
+        # Populate the treeview with save file information
+        self._populate_save_files_treeview()
         
         button_frame = ttk.Frame(load_frame)
         button_frame.pack(fill=tk.X, pady=5)
         
         load_btn = SimpleButton(button_frame, text="Load Selected", 
-                               command=lambda: self.load_selected_pet(save_listbox))
+                               command=lambda: self.load_selected_pet_from_treeview())
         load_btn.pack(side=tk.LEFT, padx=(0, 5))
         
         delete_btn = SimpleButton(button_frame, text="Delete Selected", 
-                                command=lambda: self.delete_selected_pet(save_listbox),
+                                command=lambda: self.delete_selected_pet_from_treeview(),
                                 bg=COLORS['error'])
-        delete_btn.pack(side=tk.LEFT)
+        delete_btn.pack(side=tk.LEFT, padx=(0, 5))
+        
+        refresh_btn = SimpleButton(button_frame, text="Refresh List", 
+                                 command=self._populate_save_files_treeview)
+        refresh_btn.pack(side=tk.LEFT)
         
         reset_frame = ttk.LabelFrame(parent, text="Reset Pet", padding=10)
         reset_frame.pack(fill=tk.X, padx=10, pady=10)
@@ -384,26 +550,188 @@ class SimpleSettingsWindow:
                                command=self.reset_pet,
                                bg=COLORS['error'])
         reset_btn.pack(pady=5)
+
+    def _populate_save_files_treeview(self):
+        """Populate the treeview with organized save file information"""
+        if not hasattr(self, 'save_treeview'):
+            return
+            
+        # Clear existing items
+        for item in self.save_treeview.get_children():
+            self.save_treeview.delete(item)
         
-    def load_selected_pet(self, save_listbox):
-        selected = save_listbox.curselection()
+        save_files = self.pet_manager.get_save_files()
+        save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
+        
+        # Define configuration files and their labels
+        config_files = {
+            'settings.json': 'App Settings',
+            'ai_chat_settings.json': 'AI Chat Settings (API Keys)',
+            'conversation_history.json': 'Chat History',
+            'gemini_settings.json': 'Gemini API Settings'
+        }
+        
+        for save_file in save_files:
+            try:
+                filepath = os.path.join(save_path, save_file)
+                
+                # Handle configuration files
+                if save_file in config_files:
+                    config_label = config_files[save_file]
+                    self.save_treeview.insert('', 'end', values=(
+                        f"{save_file} ({config_label})",
+                        'Configuration File',
+                        '-',
+                        '-',
+                        '-',
+                        '-'
+                    ), tags=('config',))
+                    continue
+                
+                # Try to read as pet save file
+                with open(filepath, 'r') as f:
+                    save_data = json.load(f)
+                
+                # Check if this looks like a pet save file
+                if 'name' not in save_data or 'stats' not in save_data:
+                    # This is likely another type of config file
+                    self.save_treeview.insert('', 'end', values=(
+                        f"{save_file} (Unknown Config)",
+                        'Configuration File',
+                        '-',
+                        '-',
+                        '-',
+                        '-'
+                    ), tags=('config',))
+                    continue
+                
+                # Extract information from pet save data
+                pet_name = save_data.get('name', 'Unknown')
+                stage = save_data.get('stage', 'Unknown')
+                age = round(save_data.get('stats', {}).get('age', 0), 1)
+                currency = save_data.get('currency', 0)
+                
+                # Format save date
+                save_date_str = save_data.get('save_date', '')
+                if save_date_str:
+                    try:
+                        from datetime import datetime
+                        save_date = datetime.fromisoformat(save_date_str.replace('Z', '+00:00'))
+                        formatted_date = save_date.strftime('%Y-%m-%d %H:%M')
+                    except:
+                        formatted_date = 'Unknown'
+                else:
+                    formatted_date = 'Unknown'
+                
+                # Determine file type for better labeling
+                if 'backup' in save_file.lower():
+                    display_name = f"{save_file} (Backup)"
+                    tags = ('backup',)
+                elif 'autosave' in save_file.lower():
+                    display_name = f"{save_file} (Auto)"
+                    tags = ('autosave',)
+                else:
+                    display_name = save_file
+                    tags = ('pet_save',)
+                
+                # Insert into treeview
+                self.save_treeview.insert('', 'end', values=(
+                    display_name,
+                    pet_name,
+                    stage,
+                    f"{age}",
+                    f"{currency:,}",
+                    formatted_date
+                ), tags=tags)
+                
+            except Exception as e:
+                # If we can't read the file, still show it but with limited info
+                self.save_treeview.insert('', 'end', values=(
+                    f"{save_file} (Unreadable)",
+                    'Error reading file',
+                    '-',
+                    '-',
+                    '-',
+                    '-'
+                ), tags=('error',))
+                print(f"Error reading save file {save_file}: {e}")
+        
+        # Configure tag colors for better visual distinction
+        self.save_treeview.tag_configure('config', background='#f0f0f0', foreground='#666666')
+        self.save_treeview.tag_configure('backup', background='#e6f3ff')
+        self.save_treeview.tag_configure('autosave', background='#fff2e6')
+        self.save_treeview.tag_configure('pet_save', background='white')
+        self.save_treeview.tag_configure('error', background='#ffe6e6', foreground='#cc0000')
+
+    def load_selected_pet_from_treeview(self):
+        """Load the selected pet from the treeview"""
+        selected = self.save_treeview.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select a save file to load.")
             return
-        save_file = save_listbox.get(selected[0])
-        self.pet_manager.load_pet(save_file)
-        self.window.destroy()
         
-    def delete_selected_pet(self, save_listbox):
-        selected = save_listbox.curselection()
+        # Get the filename from the first column
+        item = self.save_treeview.item(selected[0])
+        filename = item['values'][0]
+        tags = self.save_treeview.item(selected[0], 'tags')
+        
+        # Prevent loading configuration files
+        if 'config' in tags:
+            messagebox.showwarning("Invalid Selection", 
+                                  "Cannot load configuration files as pet saves.\n\nPlease select a pet save file.")
+            return
+        
+        if 'error' in tags:
+            messagebox.showerror("Invalid File", 
+                               "Cannot load this file due to read errors.\n\nThe file may be corrupted.")
+            return
+        
+        # Remove any labels like (Backup) or (Auto)
+        if ' (' in filename:
+            filename = filename.split(' (')[0]
+        
+        self.pet_manager.load_pet(filename)
+        self.window.destroy()
+
+    def delete_selected_pet_from_treeview(self):
+        """Delete the selected pet from the treeview"""
+        selected = self.save_treeview.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select a save file to delete.")
             return
-        save_file = save_listbox.get(selected[0])
-        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete {save_file}?"):
-            self.pet_manager.delete_save(save_file)
-            save_listbox.delete(selected[0])
-            messagebox.showinfo("Success", "Save file deleted successfully.")
+        
+        # Get the filename and pet name for confirmation
+        item = self.save_treeview.item(selected[0])
+        filename = item['values'][0]
+        pet_name = item['values'][1]
+        tags = self.save_treeview.item(selected[0], 'tags')
+        
+        # Warn about deleting configuration files
+        if 'config' in tags:
+            if not messagebox.askyesno("Delete Configuration File?", 
+                                      f"You are about to delete a configuration file:\n\n{filename}\n\n" +
+                                      "This may reset your settings or API keys.\n\n" +
+                                      "Are you sure you want to continue?",
+                                      icon='warning'):
+                return
+        
+        # Remove any labels like (Backup) or (Auto)
+        if ' (' in filename:
+            filename = filename.split(' (')[0]
+        
+        # Show appropriate confirmation message
+        if 'config' in tags:
+            confirm_msg = f"Are you sure you want to delete the configuration file?\n\nFile: {filename}"
+        else:
+            confirm_msg = f"Are you sure you want to delete the save file for '{pet_name}'?\n\nFile: {filename}"
+        
+        if messagebox.askyesno("Confirm Delete", confirm_msg):
+            if self.pet_manager.delete_save(filename):
+                self.save_treeview.delete(selected[0])
+                messagebox.showinfo("Success", "File deleted successfully.")
+            else:
+                messagebox.showerror("Error", "Failed to delete file.")
+
     
     def _create_appearance_tab(self, parent):
         color_frame = ttk.LabelFrame(parent, text="Pet Color", padding=10)
@@ -676,10 +1004,9 @@ class SimpleSettingsWindow:
         success, message = self.pet_manager.save_pet()
         if success:
             self.show_notification("Save Successful", f"Pet saved to {message}", COLORS['success'])
-            if self.save_listbox:
-                self.save_listbox.delete(0, tk.END)
-                for save_file in self.pet_manager.get_save_files():
-                    self.save_listbox.insert(tk.END, save_file)
+            # Refresh the treeview if it exists
+            if hasattr(self, 'save_treeview'):
+                self._populate_save_files_treeview()
         else:
             self.show_notification("Save Failed", f"Failed to save pet: {message}", COLORS['error'])
     

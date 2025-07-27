@@ -50,7 +50,7 @@
 
 ### 🎮 **Interactive Gameplay**
 - **📊 6 Core Stats**: Hunger, Happiness, Energy, Health, Cleanliness, Social
-- **🍔 80+ Food Items**: From bread to sushi, each with unique effects
+- **🍔 13 Food Items**: From apple to donut, each with unique effects
 - **🎲 3 Mini-Games**: Number Guesser, Reaction Test, Ball Clicker
 - **💰 Economy System**: Earn coins through games and care activities
 - **🧹 Realistic Care**: Clean up after your pet, manage hygiene
@@ -69,7 +69,7 @@
 ### 📥 **Installation**
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/VPet.git
+git clone https://github.com/Parreirao2/VPet.git
 cd VPet
 
 # 2. Install dependencies
@@ -205,12 +205,12 @@ VPet/
 We welcome contributions! Here's how you can help:
 
 ### **🐛 Bug Reports**
-- Check existing [issues](https://github.com/yourusername/VPet/issues)
+- Check existing [issues](https://github.com/Parreirao2/VPet/issues)
 - Include steps to reproduce
 - Add screenshots if possible
 
 ### **✨ Feature Requests**
-- Open a new [issue](https://github.com/yourusername/VPet/issues)
+- Open a new [issue](https://github.com/Parreirao2/VPet/issues)
 - Describe the feature and its benefits
 - Check if similar requests exist
 
@@ -235,6 +235,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **Ollama Team** for local AI capabilities
 - **Python Community** for amazing libraries
 - **Tamagotchi** for the original inspiration
+- **Inventory Assets** Assets by Pixelrepo (https://pixelrepo.com)
 
 ---
 

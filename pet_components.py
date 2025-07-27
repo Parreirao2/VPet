@@ -111,8 +111,12 @@ class PetStats:
                 if hunger_before > 0:
                     hunger_decrease = min(hunger_before, energy_gain * 0.5)
                 
-                # Apply energy gain and hunger decrease
+                # Calculate health gain (0.33% health for each 1% energy recovered)
+                health_gain = energy_gain * 0.33
+                
+                # Apply energy gain, health gain, and hunger decrease
                 self.modify_stat('energy', energy_gain)
+                self.modify_stat('health', health_gain)
                 if hunger_decrease > 0:
                     self.modify_stat('hunger', -hunger_decrease)
                 

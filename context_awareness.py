@@ -457,16 +457,17 @@ class ContextAwareness:
             "Let me give you some room. *hops to the side*",
         ]
 
-        if random.random() < 0.2:
+        if random.random() < 0.3:
             comment = random.choice(movement_comments)
-
             self._ensure_speech_bubble_visibility()
 
-            def show_bubble_delayed():
+            def show_bubble_and_move():
                 if hasattr(self.pet_manager, 'speech_bubble'):
-                    self.pet_manager.speech_bubble.show_bubble('custom', comment)
+                    self.pet_manager.speech_bubble.show_bubble('custom', comment, use_typewriter=False)
+                    # Move immediately after showing the bubble
+                    self.move_pet_to_safe_position(self.get_active_window_info(), delay_ms=100)
             
-            self.pet_manager.root.after(200, show_bubble_delayed)
+            self.pet_manager.root.after(200, show_bubble_and_move)
             self.last_comment_time = datetime.now()
     
     def move_pet_to_safe_position(self, window_info, delay_ms=1000):
@@ -483,7 +484,11 @@ class ContextAwareness:
 
         safe_pos = self.calculate_safe_position(window_rect, screen_width, screen_height, min_y)
         if safe_pos:
-            self.pet_manager.root.after(delay_ms, lambda: self._smooth_move_to_position(safe_pos))
+            if delay_ms <= 0:
+                # Move immediately
+                self._smooth_move_to_position(safe_pos)
+            else:
+                self.pet_manager.root.after(delay_ms, lambda: self._smooth_move_to_position(safe_pos))
     
     def _smooth_move_to_position(self, target_pos):
         if not hasattr(self.pet_manager, 'root') or not self.pet_manager.root.winfo_exists():
@@ -492,7 +497,6 @@ class ContextAwareness:
         target_x, target_y = target_pos
 
         if hasattr(self.pet_manager, 'animation') and self.pet_manager.animation:
-            print("DEBUG: Using pet's animation system for context-aware movement")
 
             self.pet_manager.animation.pause_movement()
             self.pet_manager.pet_state.is_interacting = True
@@ -518,21 +522,23 @@ class ContextAwareness:
                     self.pet_manager.pet_state.direction = 'right' if dx > 0 else 'left'
 
                 if distance < 10:
-                    print("DEBUG: Context-aware movement completed.")
                     self.pet_manager.pet_state.current_animation = 'Standing'
                     self.pet_manager.pet_state.is_interacting = False
                     self.pet_manager.animation.schedule_resume_movement(1000)
                     return
 
+                # Use normal movement speed (same as regular idling movement)
                 speed_setting = self.pet_manager.settings.get('movement_speed', 5)
-                step_size = speed_setting * 0.5
-                step_x = step_size * (dx / distance) if distance > 0 else 0
-                step_y = step_size * (dy / distance) if distance > 0 else 0
+                pixels_per_step = max(1, speed_setting)  # Same as normal movement
+                
+                step_x = pixels_per_step * (dx / distance) if distance > 0 else 0
+                step_y = pixels_per_step * (dy / distance) if distance > 0 else 0
 
                 new_x = curr_x + step_x
                 new_y = curr_y + step_y
                 self.pet_manager.root.geometry(f'+{int(new_x)}+{int(new_y)}')
 
+                # Use same timing as normal movement (50ms)
                 self.pet_manager.root.after(50, controlled_move_step)
 
             controlled_move_step()
@@ -540,24 +546,28 @@ class ContextAwareness:
     def update_context_awareness(self):
         if not self.monitoring_enabled or self.pet_manager.pet_state.is_interacting:
             return
- 
+        
+        # Add sleep state check to prevent movement while sleeping
+        if hasattr(self.pet_manager.pet_state, 'is_sleeping') and self.pet_manager.pet_state.is_sleeping:
+            return
+        
         if (datetime.now() - self.last_app_check).total_seconds() < 3:
             return
         self.last_app_check = datetime.now()
- 
+        
         window_info = self.get_active_window_info()
         if not window_info:
             return
- 
+        
         process_name = window_info['process_name']
         window_title = window_info['title']
- 
+        
         if 'virtual' in window_title.lower() and 'pet' in window_title.lower():
             return
- 
+        
         category = self.categorize_app(process_name, window_title)
         app_name = self.app_database.get(process_name, process_name.replace('.exe', '').title())
- 
+        
         current_context = f"{process_name}:{category}"
         if current_context != self.current_app:
             self.current_app = current_context
@@ -571,10 +581,7 @@ class ContextAwareness:
     def toggle_monitoring(self, enabled):
         self.monitoring_enabled = enabled
         if enabled:
-            print("DEBUG: Context-aware AI has been enabled.")
             self.last_app_check = datetime.now() - timedelta(seconds=10)
-        else:
-            print("DEBUG: Context-aware AI has been disabled.")
     
     def set_comment_cooldown(self, seconds):
         self.comment_cooldown = seconds
@@ -582,13 +589,11 @@ class ContextAwareness:
     def reset_comment_timer(self):
         self.last_comment_time = datetime.now() - timedelta(seconds=self.comment_cooldown + 1)
         self.current_app = None
-        print("DEBUG: Comment timer reset - next comment will be allowed immediately")
     
     def reset_app_memory(self):
         self.detected_apps.clear()
         self.session_apps.clear()
         self.current_app = None
-        print("DEBUG: App memory cleared - all apps will be treated as first-time detections")
     
     def _should_avoid_window(self, category, app_name):
         work_categories = {

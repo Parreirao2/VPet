@@ -259,166 +259,142 @@ class SpeechBubble:
             ]
         }
     
-    def show_bubble(self, message_type, custom_message=None, use_typewriter=False):
-        # Skip all bubbles during sleep except sleep-related ones
-        if (hasattr(self.parent, 'pet_manager') and
-            hasattr(self.parent.pet_manager, 'pet_state') and
-            self.parent.pet_manager.pet_state.is_sleeping and
-            message_type != 'sleep'):
-            return
-            
+    def show_bubble(self, message_type, custom_message=None):
         responses = self.responses.get(message_type, self.responses['default'])
+        
         message = custom_message if custom_message else random.choice(responses)
         
-        self.clear_bubble() # Always clear previous bubble before showing a new one
-        
-        # Disable typewriter effect entirely - always show complete messages
-        self._create_bubble(message_type, message)
+        self._create_bubble(message)
     
-    def _create_bubble(self, message_type, message=None):
-        # Clear any existing bubble before creating a new one
-        self.clear_bubble()
-        
-        # Handle the case where message is None
-        if message is None:
-            message = message_type
-        
-        try:
-            pet_x = self.parent.winfo_x() + self.parent.winfo_width() // 2 # Use parent's width for pet_x
-            pet_y = self.parent.winfo_y() + 100
-            
-            # Store pet position for tail direction calculation
-            self.pet_x = pet_x
-            self.pet_y = pet_y
-            
-            self.bubble_window = tk.Toplevel(self.parent)
-            
-            self.bubble_window.overrideredirect(True)
-            self.bubble_window.attributes('-topmost', True)
-            self.bubble_window.attributes('-transparentcolor', 'white')
-            
-            self.bubble_window.configure(bg='white')
-            
-        except Exception as e:
-            print(f"Error in _create_bubble setup: {e}")
-            import traceback
-            traceback.print_exc()
+    def _create_bubble(self, message, is_typewriter=False, is_complete=False):
+        # Only clear bubble if this is not a typewriter update
+        if not is_typewriter:
+            self.clear_bubble()
+        elif self.bubble_window:
+            # For typewriter effect, just update the existing bubble
+            self._update_bubble_text(message, is_complete)
             return
         
-        try:
-            padding = 12
-            
-            # Calculate dynamic size based on message length (following old implementation pattern)
-            temp_label = tk.Label(self.bubble_window, text=message, font=("Comic Sans MS", 11, "bold"), wraplength=250)
-            temp_label.update_idletasks()
-            
-            text_width = temp_label.winfo_reqwidth()
-            text_height = temp_label.winfo_reqheight()
-            temp_label.destroy()
-            
-            # Dynamic sizing - grow with content but have reasonable limits
-            min_width = 120
-            max_width = 300
-            bubble_width = max(min_width, min(text_width + padding * 2, max_width))
-            bubble_height = max(40, text_height + padding * 2)
-            
-            canvas_width = bubble_width + 40
-            canvas_height = bubble_height + 40
-            
-            bubble_canvas = tk.Canvas(
-                self.bubble_window,
-                width=canvas_width,
-                height=canvas_height,
-                bg='white',
-                highlightthickness=0
-            )
-            bubble_canvas.pack()
-            
-            corner_radius = 15
-            
-            # Create bubble shape with rounded corners
-            bubble_canvas.create_arc(15, 15, 15 + corner_radius*2, 15 + corner_radius*2,
-                                    start=90, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
-            bubble_canvas.create_arc(bubble_width + 15 - corner_radius*2, 15, bubble_width + 15, 15 + corner_radius*2,
-                                    start=0, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
-            bubble_canvas.create_arc(15, bubble_height + 15 - corner_radius*2, 15 + corner_radius*2, bubble_height + 15,
-                                    start=180, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
-            bubble_canvas.create_arc(bubble_width + 15 - corner_radius*2, bubble_height + 15 - corner_radius*2,
-                                    bubble_width + 15, bubble_height + 15,
-                                    start=270, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
-            
-            bubble_canvas.create_rectangle(15 + corner_radius, 15, bubble_width + 15 - corner_radius, 15 + corner_radius,
-                                          fill="#FFFFCC", outline="#FFFFCC")
-            bubble_canvas.create_rectangle(15 + corner_radius, bubble_height + 15 - corner_radius,
-                                          bubble_width + 15 - corner_radius, bubble_height + 15,
-                                          fill="#FFFFCC", outline="#FFFFCC")
-            bubble_canvas.create_rectangle(15, 15 + corner_radius, 15 + corner_radius, bubble_height + 15 - corner_radius,
-                                          fill="#FFFFCC", outline="#FFFFCC")
-            bubble_canvas.create_rectangle(bubble_width + 15 - corner_radius, 15 + corner_radius,
-                                          bubble_width + 15, bubble_height + 15 - corner_radius,
-                                          fill="#FFFFCC", outline="#FFFFCC")
-            bubble_canvas.create_rectangle(15 + corner_radius, 15 + corner_radius,
-                                          bubble_width + 15 - corner_radius, bubble_height + 15 - corner_radius,
-                                          fill="#FFFFCC", outline="#FFFFCC")
-            
-            border_points = [
-                15 + corner_radius, 15,
-                bubble_width + 15 - corner_radius, 15,
-                bubble_width + 15, 15 + corner_radius,
-                bubble_width + 15, bubble_height + 15 - corner_radius,
-                bubble_width + 15 - corner_radius, bubble_height + 15,
-                15 + corner_radius, bubble_height + 15,
-                15, bubble_height + 15 - corner_radius,
-                15, 15 + corner_radius,
-                15 + corner_radius, 15
-            ]
-            
-            bubble_canvas.create_polygon(border_points, fill="#FFFFCC", outline="", width=0)
-            
-            # Store canvas reference and dimensions for tail creation
-            self.bubble_canvas = bubble_canvas
-            self.bubble_width = bubble_width
-            self.bubble_height = bubble_height
-            self.canvas_width = canvas_width
-            self.canvas_height = canvas_height
-            
-            # Create tail - will be positioned correctly in _update_bubble_position
-            self._create_bubble_tail()
-            
-            self._update_bubble_position(canvas_width, canvas_height)
-            
-            self._start_position_updates(canvas_width, canvas_height)
-            
-            # Store text widget reference
-            self.bubble_text_id = bubble_canvas.create_text(
-                (bubble_width + 30) // 2,
-                (bubble_height + 30) // 2,
-                text=message,
-                font=("Comic Sans MS", 11, "bold"),
-                fill="black",
-                width=bubble_width - padding,
-                justify=tk.CENTER,
-                anchor="center"
-            )
-            
-            # Set display duration based on message length
+        pet_x = self.parent.winfo_x() + self.canvas.winfo_width() // 2
+        pet_y = self.parent.winfo_y() + 100
+        
+        # Store pet position for tail direction calculation
+        self.pet_x = pet_x
+        self.pet_y = pet_y
+        
+        self.bubble_window = tk.Toplevel(self.parent)
+        self.bubble_window.overrideredirect(True)
+        self.bubble_window.attributes('-topmost', True)
+        self.bubble_window.attributes('-transparentcolor', 'white')
+        
+        self.bubble_window.configure(bg='white')
+        
+        padding = 12
+        
+        # Calculate dynamic size based on message length
+        temp_label = tk.Label(self.bubble_window, text=message, font=("Comic Sans MS", 11, "bold"), wraplength=250)
+        temp_label.update_idletasks()
+        
+        text_width = temp_label.winfo_reqwidth()
+        text_height = temp_label.winfo_reqheight()
+        temp_label.destroy()
+        
+        # Dynamic sizing - grow with content but have reasonable limits
+        min_width = 120
+        max_width = 300
+        bubble_width = max(min_width, min(text_width + padding * 2, max_width))
+        bubble_height = max(40, text_height + padding * 2)
+        
+        canvas_width = bubble_width + 40
+        canvas_height = bubble_height + 40
+        
+        bubble_canvas = tk.Canvas(
+            self.bubble_window, 
+            width=canvas_width,
+            height=canvas_height,
+            bg='white',
+            highlightthickness=0
+        )
+        bubble_canvas.pack()
+        
+        corner_radius = 15
+        
+        bubble_canvas.create_arc(15, 15, 15 + corner_radius*2, 15 + corner_radius*2, 
+                                start=90, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
+        bubble_canvas.create_arc(bubble_width + 15 - corner_radius*2, 15, bubble_width + 15, 15 + corner_radius*2, 
+                                start=0, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
+        bubble_canvas.create_arc(15, bubble_height + 15 - corner_radius*2, 15 + corner_radius*2, bubble_height + 15, 
+                                start=180, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
+        bubble_canvas.create_arc(bubble_width + 15 - corner_radius*2, bubble_height + 15 - corner_radius*2, 
+                                bubble_width + 15, bubble_height + 15, 
+                                start=270, extent=90, fill="#FFFFCC", outline="#FFFFCC", width=0, style=tk.PIESLICE)
+        
+        bubble_canvas.create_rectangle(15 + corner_radius, 15, bubble_width + 15 - corner_radius, 15 + corner_radius, 
+                                      fill="#FFFFCC", outline="#FFFFCC")
+        bubble_canvas.create_rectangle(15 + corner_radius, bubble_height + 15 - corner_radius, 
+                                      bubble_width + 15 - corner_radius, bubble_height + 15, 
+                                      fill="#FFFFCC", outline="#FFFFCC")
+        bubble_canvas.create_rectangle(15, 15 + corner_radius, 15 + corner_radius, bubble_height + 15 - corner_radius, 
+                                      fill="#FFFFCC", outline="#FFFFCC")
+        bubble_canvas.create_rectangle(bubble_width + 15 - corner_radius, 15 + corner_radius, 
+                                      bubble_width + 15, bubble_height + 15 - corner_radius, 
+                                      fill="#FFFFCC", outline="#FFFFCC")
+        bubble_canvas.create_rectangle(15 + corner_radius, 15 + corner_radius, 
+                                      bubble_width + 15 - corner_radius, bubble_height + 15 - corner_radius, 
+                                      fill="#FFFFCC", outline="#FFFFCC")
+        
+        border_points = [
+            15 + corner_radius, 15,
+            bubble_width + 15 - corner_radius, 15,
+            bubble_width + 15, 15 + corner_radius,
+            bubble_width + 15, bubble_height + 15 - corner_radius,
+            bubble_width + 15 - corner_radius, bubble_height + 15,
+            15 + corner_radius, bubble_height + 15,
+            15, bubble_height + 15 - corner_radius,
+            15, 15 + corner_radius,
+            15 + corner_radius, 15
+        ]
+        
+        bubble_canvas.create_polygon(border_points, fill="#FFFFCC", outline="", width=0)
+        
+        # Store canvas reference and dimensions for tail creation
+        self.bubble_canvas = bubble_canvas
+        self.bubble_width = bubble_width
+        self.bubble_height = bubble_height
+        self.canvas_width = canvas_width
+        self.canvas_height = canvas_height
+        
+        # Create tail - will be positioned correctly in _update_bubble_position
+        self._create_bubble_tail()
+        
+        # This will be replaced by the stored text reference below
+        
+        self._update_bubble_position(canvas_width, canvas_height)
+        
+        self._start_position_updates(canvas_width, canvas_height)
+        
+        # Store text widget reference for typewriter updates
+        self.bubble_text_id = bubble_canvas.create_text(
+            (bubble_width + 30) // 2,
+            (bubble_height + 30) // 2,
+            text=message,
+            font=("Comic Sans MS", 11, "bold"),
+            fill="black",
+            width=bubble_width - padding,
+            justify=tk.CENTER,
+            anchor="center"
+        )
+        
+        # Store canvas reference for updates
+        self.bubble_canvas = bubble_canvas
+        
+        # Set display duration - longer for typewriter effect or longer messages
+        if is_typewriter and not is_complete:
+            # Don't auto-clear during typewriter effect
+            pass
+        else:
             display_time = max(self.bubble_duration, len(message) * 100)
             self._bubble_timer = self.parent.after(display_time, self.clear_bubble)
-            
-            # Force window to show and update
-            self.bubble_window.update_idletasks()
-            self.bubble_window.deiconify()
-            # Force window to show and update (add after the existing deiconify line)
-            self.bubble_window.update_idletasks()
-            self.bubble_window.deiconify()
-            self.bubble_window.lift()  # Bring to front
-            self.bubble_window.focus_force()  # Force focus
-            self.bubble_window.attributes('-topmost', True)  # Ensure it stays on top
-            
-        except Exception as e:
-            print(f"Error creating speech bubble: {e}")
-            import traceback
-            traceback.print_exc()
     
     def _update_bubble_position(self, canvas_width, canvas_height):
         if not self.bubble_window:
@@ -434,7 +410,7 @@ class SpeechBubble:
         screen_width = self.parent.winfo_screenwidth()
         screen_height = self.parent.winfo_screenheight()
         
-        # Adjust horizontal position to stay on screen (following old implementation pattern)
+        # Adjust horizontal position to stay on screen
         if bubble_x < 0:
             bubble_x = 0
         elif bubble_x + canvas_width > screen_width:
@@ -470,15 +446,18 @@ class SpeechBubble:
         if abs(new_y - current_y) < 150:  # Max 150px adjustment
             
             # Double-check that pet isn't moving before we start our own movement
-            if (hasattr(self.parent, 'pet_manager') and
-                hasattr(self.parent.pet_manager, 'pet_state') and
+            if (hasattr(self.parent, 'pet_manager') and 
+                hasattr(self.parent.pet_manager, 'pet_state') and 
                 self.parent.pet_manager.pet_state.is_interacting):
+                print("DEBUG: Pet became busy during bubble positioning, aborting movement")
                 return
             # Try to use the pet's animation system for natural movement
             if hasattr(self.parent, 'pet_manager') and hasattr(self.parent.pet_manager, 'pet_animation'):
                 pet_animation = self.parent.pet_manager.pet_animation
                 pet_state = self.parent.pet_manager.pet_state
                 settings = self.parent.pet_manager.settings
+                
+                print("DEBUG: Using pet's natural movement system for bubble positioning")
                 
                 # Pause current movement
                 pet_animation.pause_movement()
@@ -502,6 +481,7 @@ class SpeechBubble:
                     distance = abs(new_y - curr_y)
                     
                     if distance < 10:  # Close enough
+                        print("DEBUG: Natural bubble positioning movement completed")
                         pet_state.current_animation = 'Standing'
                         pet_animation.schedule_resume_movement(1000)  # Resume after 1 second
                         # Reset repositioning flag when movement is complete
@@ -515,6 +495,7 @@ class SpeechBubble:
                 
             else:
                 # Fallback to slower, more natural movement
+                print("DEBUG: Using fallback natural movement for bubble positioning")
                 
                 # Use much slower movement that mimics normal pet speed
                 total_distance = abs(new_y - current_y)
@@ -550,31 +531,31 @@ class SpeechBubble:
         self._update_position_timer = self.parent.after(50, update_loop)
     
     def _update_bubble_text(self, new_text, is_complete=False):
-        """Update the text in an existing bubble (deprecated - no longer used for typewriter)"""
+        """Update the text in an existing bubble (for typewriter effect)"""
         if not self.bubble_window or not hasattr(self, 'bubble_canvas') or not hasattr(self, 'bubble_text_id'):
             return
         
         try:
             # Update the text
             self.bubble_canvas.itemconfig(self.bubble_text_id, text=new_text)
+            
+            # If typing is complete, set a timer to clear the bubble
+            if is_complete:
+                display_time = max(self.bubble_duration, len(new_text) * 100)
+                self._bubble_timer = self.parent.after(display_time, self.clear_bubble)
         except tk.TclError:
             # Bubble was destroyed, ignore
             pass
     
     def show_typewriter_bubble(self, text, is_complete=False):
-        """Show a speech bubble without typewriter effect (deprecated - use show_bubble instead)"""
-        # This method now shows the complete text immediately without typewriter effect
-        self.show_bubble('custom', text)
-    
-    
-
-    
+        """Show a speech bubble with typewriter effect (for AI chat)"""
+        self._create_bubble(text, is_typewriter=True, is_complete=is_complete)
     
     def show_dynamic_typewriter_bubble(self, text, is_complete=False):
-        """Show a speech bubble that displays complete text immediately"""
-        # Clear existing bubble and create new one with complete text
+        """Show a speech bubble that dynamically resizes as text appears"""
+        # Clear existing bubble and create new one with current text
         self.clear_bubble()
-        self._create_bubble('custom', text)
+        self._create_bubble(text, is_typewriter=False, is_complete=is_complete)
     
     def clear_bubble(self):
         if self._bubble_timer:
@@ -584,8 +565,6 @@ class SpeechBubble:
         if self._update_position_timer:
             self.parent.after_cancel(self._update_position_timer)
             self._update_position_timer = None
-        
-        
         
         if self.bubble_window:
             self.bubble_window.destroy()

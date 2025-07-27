@@ -62,6 +62,32 @@ class InventoryItem:
 
 class InventorySystem:
     
+    def get_item_tier_color(self, item_id):
+        """Get the tier color for an item based on its category"""
+        # Basic items (black)
+        if item_id in ["toilet_paper", "shower", "sleeping"]:
+            return "#000000"  # Black
+        
+        # Good items (gold)
+        elif item_id == "first_aid":
+            return "#FFD700"  # Gold
+        
+        # Exotic items (violet)
+        elif item_id in ["enchanted_apple", "evo1", "evo2"]:
+            return "#8A2BE2"  # Violet
+        
+        # Food items based on price tiers
+        else:
+            price = self.get_item_price(item_id)
+            if price <= 35:  # Basic food items
+                return "#0080FF"  # Blue
+            elif price <= 75:  # Mid-tier food items
+                return "#32CD32"  # Lime green (less vivid than pure green)
+            elif price <= 125:  # Good food items
+                return "#FFD700"  # Gold
+            else:  # Premium food items
+                return "#FF0000"  # Red
+
     def __init__(self, root, canvas, pet_state):
         self.root = root
         self.canvas = canvas
@@ -107,6 +133,30 @@ class InventorySystem:
                 shower.load_image()
                 self.items["shower"] = shower
     
+                first_aid_path = os.path.join(img_path, 'First_Aid.png')
+                if os.path.exists(first_aid_path):
+                    first_aid = InventoryItem(
+                        name="First Aid",
+                        image_path=first_aid_path,
+                        description="Heals your pet by 50%",
+                        quantity=0,
+                        cost=100
+                    )
+                    first_aid.load_image()
+                    self.items["first_aid"] = first_aid
+    
+                enchanted_apple_path = os.path.join(img_path, 'Enchanted_Apple.png')
+                if os.path.exists(enchanted_apple_path):
+                    enchanted_apple = InventoryItem(
+                        name="Enchanted Apple",
+                        image_path=enchanted_apple_path,
+                        description="Restores all stats to 100% and sets Poop Chance to 0%",
+                        quantity=0,
+                        cost=250
+                    )
+                    enchanted_apple.load_image()
+                    self.items["enchanted_apple"] = enchanted_apple
+                
                 sleeping_path = os.path.join(img_path, 'sleeping.png')
                 if os.path.exists(sleeping_path):
                     sleeping = InventoryItem(
@@ -123,7 +173,7 @@ class InventorySystem:
             evo1_path = os.path.join(img_path, 'Evo1.png')
             if os.path.exists(evo1_path):
                 evo1 = InventoryItem(
-                    name="Evo1",
+                    name="Evo Spirit",
                     image_path=evo1_path,
                     description="Evolves your pet to the next stage.",
                     quantity=0,
@@ -135,7 +185,7 @@ class InventorySystem:
             evo2_path = os.path.join(img_path, 'Evo2.png')
             if os.path.exists(evo2_path):
                 evo2 = InventoryItem(
-                    name="Evo2",
+                    name="Special Evo Spirit",
                     image_path=evo2_path,
                     description="Evolves your pet to a special stage.",
                     quantity=0,
@@ -145,70 +195,32 @@ class InventorySystem:
                 self.items["evo2"] = evo2
 
             food_items = [
-    # Basic/Cheap Items
-    ("bun", "Bun", "Hunger: +5, Happiness: +2, Energy: +2, Health: +1, Cleanliness: 0", 15),
-    ("jam", "Jam", "Hunger: +6, Happiness: +4, Energy: +3, Health: +1, Cleanliness: -1", 18),
-    ("bread", "Bread", "Hunger: +8, Happiness: +3, Energy: +4, Health: +2, Cleanliness: 0", 20),
-    ("donut", "Donut", "Hunger: +7, Happiness: +6, Energy: +4, Health: 0, Cleanliness: -2", 22),
-    ("friedegg", "Fried Egg", "Hunger: +9, Happiness: +4, Energy: +5, Health: +2, Cleanliness: -1", 24),
-    ("jelly", "Jelly", "Hunger: +7, Happiness: +6, Energy: +4, Health: +1, Cleanliness: -2", 23),
-    ("potatochips_bowl", "Potato Chips Bowl", "Hunger: +8, Happiness: +6, Energy: +3, Health: 0, Cleanliness: -2", 22),
+                # Basic Items (15-35 coins)
+                ("apple", "Apple", "Hunger: +8, Happiness: +3, Energy: +4, Health: +6, Cleanliness: +1", 15),
+                ("donut", "Donut", "Hunger: +6, Happiness: +8, Energy: +10, Health: -4, Cleanliness: -3", 25),
+                ("croissant", "Croissant", "Hunger: +12, Happiness: +5, Energy: +6, Health: +2, Cleanliness: -2", 35),
+                
+                # Mid-tier Items (45-75 coins)
+                ("hotdog", "Hotdog", "Hunger: +15, Happiness: +6, Energy: +8, Health: -2, Cleanliness: -4", 45),
+                ("sandwich", "Sandwich", "Hunger: +18, Happiness: +7, Energy: +10, Health: +4, Cleanliness: -1", 55),
+                ("bacon", "Bacon", "Hunger: +10, Happiness: +8, Energy: +12, Health: -3, Cleanliness: -5", 65),
+                ("cupcake", "Cupcake", "Hunger: +8, Happiness: +12, Energy: +15, Health: -5, Cleanliness: -4", 75),
+                
+                # Good Items (85-125 coins)
+                ("cheese", "Cheese", "Hunger: +20, Happiness: +8, Energy: +6, Health: +8, Cleanliness: -2", 85),
+                ("burger", "Burger", "Hunger: +25, Happiness: +10, Energy: +12, Health: -1, Cleanliness: -6", 95),
+                ("ice_cream", "Ice Cream", "Hunger: +12, Happiness: +15, Energy: +18, Health: -2, Cleanliness: -3", 105),
+                
+                # Premium Items (135-200 coins)
+                ("chocolate_bar", "Chocolate Bar", "Hunger: +6, Happiness: +20, Energy: +25, Health: -6, Cleanliness: -4", 135),
+                ("cooked_fish", "Cooked Fish", "Hunger: +28, Happiness: +12, Energy: +15, Health: +15, Cleanliness: -3", 165),
+                ("sushi", "Sushi", "Hunger: +30, Happiness: +18, Energy: +20, Health: +18, Cleanliness: +2", 200)
+            ]
 
-    # Mid-tier Items
-    ("bagel", "Bagel", "Hunger: +12, Happiness: +5, Energy: +5, Health: +3, Cleanliness: -1", 30),
-    ("bacon", "Bacon", "Hunger: +13, Happiness: +6, Energy: +6, Health: +2, Cleanliness: -2", 34),
-    ("cookies", "Cookies", "Hunger: +12, Happiness: +7, Energy: +6, Health: +1, Cleanliness: -1", 36),
-    ("eggtart", "Egg Tart", "Hunger: +13, Happiness: +6, Energy: +5, Health: +2, Cleanliness: -1", 33),
-    ("garlicbread", "Garlic Bread", "Hunger: +12, Happiness: +6, Energy: +5, Health: +3, Cleanliness: -2", 32),
-    ("loafbread", "Loaf Bread", "Hunger: +14, Happiness: +4, Energy: +5, Health: +3, Cleanliness: 0", 35),
-    ("popcorn_bowl", "Popcorn Bowl", "Hunger: +13, Happiness: +6, Energy: +4, Health: +2, Cleanliness: -2", 33),
-    ("cheesepuff_bowl", "Cheesepuff Bowl", "Hunger: +17, Happiness: +7, Energy: +5, Health: +1, Cleanliness: -3", 45),
-    ("frenchfries", "French Fries", "Hunger: +18, Happiness: +7, Energy: +4, Health: +1, Cleanliness: -3", 47),
-    ("hotdog", "Hot Dog", "Hunger: +19, Happiness: +6, Energy: +5, Health: +1, Cleanliness: -2", 48),
-    ("nacho", "Nacho", "Hunger: +18, Happiness: +7, Energy: +4, Health: +1, Cleanliness: -3", 46),
-    ("pudding", "Pudding", "Hunger: +16, Happiness: +7, Energy: +5, Health: +2, Cleanliness: -1", 42),
-    ("sandwich", "Sandwich", "Hunger: +20, Happiness: +6, Energy: +6, Health: +4, Cleanliness: -1", 50),
-    ("waffle", "Waffle", "Hunger: +19, Happiness: +7, Energy: +5, Health: +2, Cleanliness: -2", 48),
-
-    # Good Items
-    ("baguette", "Baguette", "Hunger: +23, Happiness: +6, Energy: +6, Health: +4, Cleanliness: -1", 55),
-    ("chocolate", "Chocolate", "Hunger: +22, Happiness: +10, Energy: +6, Health: +2, Cleanliness: -1", 58),
-    ("dumplings", "Dumplings", "Hunger: +24, Happiness: +6, Energy: +6, Health: +4, Cleanliness: -1", 60),
-    ("gingerbreadman", "Gingerbread Man", "Hunger: +22, Happiness: +9, Energy: +6, Health: +2, Cleanliness: -2", 58),
-    ("meatball", "Meatball", "Hunger: +25, Happiness: +7, Energy: +7, Health: +5, Cleanliness: -1", 62),
-    ("pancakes", "Pancakes", "Hunger: +24, Happiness: +9, Energy: +6, Health: +3, Cleanliness: -1", 60),
-    ("ramen", "Ramen", "Hunger: +26, Happiness: +8, Energy: +7, Health: +4, Cleanliness: -2", 65),
-    ("taco", "Taco", "Hunger: +24, Happiness: +7, Energy: +6, Health: +3, Cleanliness: -2", 60),
-    ("burrito", "Burrito", "Hunger: +30, Happiness: +7, Energy: +7, Health: +3, Cleanliness: -2", 70),
-    ("eggsalad_bowl", "Egg Salad Bowl", "Hunger: +28, Happiness: +6, Energy: +6, Health: +5, Cleanliness: -1", 72),
-    ("fruitcake", "Fruitcake", "Hunger: +29, Happiness: +7, Energy: +6, Health: +4, Cleanliness: -1", 74),
-    ("macncheese", "Mac and Cheese", "Hunger: +30, Happiness: +9, Energy: +6, Health: +3, Cleanliness: -2", 76),
-    ("omlet", "Omelet", "Hunger: +28, Happiness: +6, Energy: +7, Health: +5, Cleanliness: -1", 72),
-    ("burger", "Burger", "Hunger: +34, Happiness: +8, Energy: +8, Health: +3, Cleanliness: -3", 85),
-    ("icecream_bowl", "Ice Cream Bowl", "Hunger: +32, Happiness: +10, Energy: +5, Health: +2, Cleanliness: -2", 80),
-    ("lemonpie", "Lemon Pie", "Hunger: +33, Happiness: +10, Energy: +6, Health: +3, Cleanliness: -2", 82),
-    ("applepie", "Apple Pie", "Hunger: +34, Happiness: +10, Energy: +6, Health: +4, Cleanliness: -2", 86),
-    ("spaghetti", "Spaghetti", "Hunger: +35, Happiness: +8, Energy: +7, Health: +5, Cleanliness: -2", 88),
-
-    # Premium Items (now stronger)
-    ("cheesecake", "Cheesecake", "Hunger: +45, Happiness: +18, Energy: +12, Health: +8, Cleanliness: -2", 105),
-    ("curry", "Curry", "Hunger: +48, Happiness: +15, Energy: +14, Health: +12, Cleanliness: -3", 110),
-    ("pizza", "Pizza", "Hunger: +50, Happiness: +17, Energy: +14, Health: +10, Cleanliness: -3", 115),
-    ("sushi", "Sushi", "Hunger: +47, Happiness: +16, Energy: +13, Health: +14, Cleanliness: -1", 108),
-    ("chocolatecake", "Chocolate Cake", "Hunger: +52, Happiness: +20, Energy: +12, Health: +9, Cleanliness: -2", 120),
-    ("salmon", "Salmon", "Hunger: +55, Happiness: +15, Energy: +15, Health: +14, Cleanliness: -1", 130),
-    ("strawberrycake", "Strawberry Cake", "Hunger: +50, Happiness: +19, Energy: +13, Health: +10, Cleanliness: -2", 118),
-    ("giantgummybear", "Giant Gummy Bear", "Hunger: +52, Happiness: +24, Energy: +16, Health: +8, Cleanliness: -3", 135),
-    ("roastedchicken", "Roasted Chicken", "Hunger: +56, Happiness: +17, Energy: +17, Health: +13, Cleanliness: -2", 140),
-
-    # Luxury Item (maxed)
-    ("steak", "Steak", "Hunger: +60, Happiness: +60, Energy: +60, Health: +60, Cleanliness: +60", 200)
-]
-
-            
-            new_recipes_path = os.path.join(img_path, 'New_recipes')
+            # ... existing code ...
+            inventory_path = os.path.join(img_path, 'Inventory')
             for item_id, name, desc, price in food_items:
-                item_path = os.path.join(new_recipes_path, f"{item_id}.png")
+                item_path = os.path.join(inventory_path, f"{name.replace(' ', '_')}.png")
                 if os.path.exists(item_path):
                     item = InventoryItem(
                         name=name,
@@ -218,12 +230,11 @@ class InventorySystem:
                     )
                     item.load_image()
                     self.items[item_id] = item
-                    
+
         except Exception as e:
             print(f"Error loading default inventory items: {e}")
     
     def show_inventory(self, parent_window=None):
-        print(f"[DEBUG] InventorySystem.show_inventory: parent_window={'valid' if parent_window else 'None'}")
         if hasattr(self.pet_state, 'stats_menu') and self.pet_state.stats_menu.winfo_exists():
             self.pet_state.stats_menu.destroy()
         
@@ -242,8 +253,6 @@ class InventorySystem:
             # Position to the right of the parent window
             x = parent_window.winfo_x() + parent_window.winfo_width()
             y = parent_window.winfo_y()
-            print(f"[DEBUG] Positioning inventory window relative to parent: x={x}, y={y}")
-            print(f"[DEBUG] Parent window geometry: x={parent_window.winfo_x()}, y={parent_window.winfo_y()}, width={parent_window.winfo_width()}, height={parent_window.winfo_height()}")
             self.inventory_window.geometry(f"+{x}+{y}")
             # Ensure the inventory window is on top of the parent window
             self.inventory_window.attributes('-topmost', True)
@@ -253,7 +262,6 @@ class InventorySystem:
             # Default positioning to the right of the main window
             x = self.root.winfo_x() + self.root.winfo_width()
             y = self.root.winfo_y()
-            print(f"[DEBUG] Positioning inventory window with default positioning: x={x}, y={y}")
             self.inventory_window.geometry(f"+{x}+{y}")
             self.inventory_window.attributes('-topmost', True)
         
@@ -374,12 +382,25 @@ class InventorySystem:
         row, col = 0, 0
         max_cols = 4
 
-        sorted_items = sorted(self.items.items(), key=lambda item: self.get_item_price(item[0]))
+        # Custom sort to place First Aid next to Sleep
+        def custom_sort(item_tuple):
+            item_id, item = item_tuple
+            # Define special item order
+            special_order = ["toilet_paper", "shower", "first_aid", "sleeping"]
+            if item_id in special_order:
+                return (0, special_order.index(item_id))  # Group 0 for special items, ordered by position
+            else:
+                return (1, self.get_item_price(item_id))  # Group 1 for other items, sorted by price
+
+        sorted_items = sorted(self.items.items(), key=custom_sort)
 
         for item_id, item in sorted_items:
+            # Get tier color for this item
+            tier_color = self.get_item_tier_color(item_id)
+            
             item_frame = tk.Frame(grid_frame, bg=COLORS['surface'],
-                                highlightbackground=COLORS['primary_light'],
-                                highlightthickness=1 if item.selected else 0,
+                                highlightbackground=tier_color,  # Use tier color for border
+                                highlightthickness=2,  # Make border more visible
                                 width=70, height=120)
             item_frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
             item_frame.grid_propagate(False)
@@ -388,8 +409,9 @@ class InventorySystem:
                 img_label = tk.Label(item_frame, image=item.image, bg=COLORS['surface'])
                 img_label.pack(pady=(5, 0))
             
-            name_label = tk.Label(item_frame, text=item.name, font=("Arial", 8),
-                                bg=COLORS['surface'], fg=COLORS['text'])
+            # Use tier color for item name
+            name_label = tk.Label(item_frame, text=item.name, font=("Arial", 8, "bold"),
+                                bg=COLORS['surface'], fg=tier_color)  # Use tier color for text
             name_label.pack(pady=(2, 0))
             
             qty_label = None
@@ -472,7 +494,9 @@ class InventorySystem:
             
             for button in self.item_buttons:
                 if button["id"] == self.get_item_id(self.selected_item):
-                    button["frame"].config(highlightthickness=0)
+                    # Reset to tier color instead of removing border
+                    tier_color = self.get_item_tier_color(button["id"])
+                    button["frame"].config(highlightbackground=tier_color, highlightthickness=2)
         
         item = self.items.get(item_id)
         if item and item.quantity > 0:
@@ -481,9 +505,12 @@ class InventorySystem:
             
             for button in self.item_buttons:
                 if button["id"] == item_id:
-                    button["frame"].config(highlightthickness=2)
+                    # Use white border for selected item to show selection
+                    button["frame"].config(highlightbackground="white", highlightthickness=3)
                 else:
-                    button["frame"].config(highlightthickness=0)
+                    # Reset to tier color
+                    tier_color = self.get_item_tier_color(button["id"])
+                    button["frame"].config(highlightbackground=tier_color, highlightthickness=2)
         else:
             if item and item.quantity <= 0:
                 print(f"Out of {item.name}")
@@ -496,8 +523,6 @@ class InventorySystem:
             for stat in ['hunger', 'happiness', 'energy', 'health', 'cleanliness', 'social']:
                 initial_stats[stat] = self.pet_state.stats[stat]
             
-            print(f"[DEBUG] Using item: {item.name} (ID: {item_id})")
-            print(f"[DEBUG] Initial stats: {initial_stats}")
             
             # Check if this is a food item before applying effects
             is_food_item = False
@@ -520,14 +545,12 @@ class InventorySystem:
             
             # Skip immediate stat display for sleeping item (handled separately)
             if item.name == "Sleep":
-                print("[DEBUG] Skipping immediate stat display for sleeping item")
                 pass
             elif changes and not is_food_item:  # Don't show speech bubble for food items (handled by handle_interaction)
                 # Use speech bubble system instead of inventory window pop-ups
                 if hasattr(self.pet_state, 'speech_bubble') and self.pet_state.speech_bubble:
                     change_text = "\n".join(changes)
                     self.pet_state.speech_bubble.show_bubble('custom', f"Used {item.name}!\n{change_text}")
-                    print(f"[DEBUG] Displayed speech bubble with changes: {change_text}")
                 else:
                     # Fallback to inventory window if speech bubble not available
                     feedback = tk.Label(self.inventory_window,
@@ -538,7 +561,6 @@ class InventorySystem:
                                       padx=10, pady=5)
                     feedback.place(relx=0.5, rely=0.1, anchor="center")
                     self.inventory_window.after(2000, feedback.destroy)
-                    print("[DEBUG] Used fallback inventory window pop-up")
             
             if not item.unlimited:
                 item.quantity -= 1
@@ -614,7 +636,6 @@ class InventorySystem:
         
         effects = {}
         
-        print(f"[DEBUG] Applying effects for item: {item.name}")
         if item.description:
             for effect in item.description.split(", "):
                 if ": " in effect:
@@ -656,7 +677,6 @@ class InventorySystem:
             # Increase poop pressure for food items
             if is_food_item and hasattr(self.pet_state, 'pet_manager') and hasattr(self.pet_state.pet_manager, 'poop_system'):
                 self.pet_state.pet_manager.poop_system.add_food_consumed(1)
-                print(f"[DEBUG] Food item used - increased poop pressure")
         elif item.name == "Toilet Paper":
             if hasattr(self.pet_state, 'poop_system'):
                 num_poops = len(self.pet_state.poop_system.poops)
@@ -707,7 +727,7 @@ class InventorySystem:
             # The inventory system already displays the speech bubble
             return True
         
-        elif item.name == "Evo1":
+        elif item.name == "Evo Spirit":
             if self.pet_state.stage != "Adult":
                 if self.pet_state.stage == "Baby":
                     self.pet_state.growth.evolve_to("Child")
@@ -728,7 +748,7 @@ class InventorySystem:
                         self.inventory_window.after(2000, message.destroy)
                 item.quantity += 1
                 return False
-        elif item.name == "Evo2":
+        elif item.name == "Special Evo Spirit":
             if self.pet_state.stage != "Special":
                 self.pet_state.growth.evolve_to("Special")
                 if hasattr(self.pet_state, 'speech_bubble') and self.pet_state.speech_bubble:
@@ -774,6 +794,111 @@ class InventorySystem:
                         self.inventory_window.after(2000, message.destroy)
                 item.quantity += 1  # Refund item
                 return False
+            
+            # Calculate sleep time based on missing energy
+            current_energy = self.pet_state.stats.get_stat('energy')
+            missing_energy = 100 - current_energy
+            if missing_energy <= 0:
+                if hasattr(self.pet_state, 'speech_bubble') and self.pet_state.speech_bubble:
+                    self.pet_state.speech_bubble.show_bubble('custom', "Pet already has full energy!")
+                else:
+                    if self.inventory_window and self.inventory_window.winfo_exists():
+                        message = tk.Label(self.inventory_window, text="Pet already has full energy!",
+                                          bg=COLORS['info'], fg="white",
+                                          font=("Arial", 10, "bold"),
+                                          padx=10, pady=5)
+                        message.place(relx=0.5, rely=0.1, anchor="center")
+                        self.inventory_window.after(2000, message.destroy)
+                item.quantity += 1  # Refund item
+                return False
+            
+            # Calculate sleep duration (max 5 minutes = 300000ms, scaled by missing energy)
+            max_sleep_time = 300000  # 5 minutes in milliseconds
+            sleep_duration = int(max_sleep_time * (missing_energy / 100))
+            min_sleep_time = 5000  # Minimum 5 seconds
+            sleep_duration = max(min_sleep_time, sleep_duration)
+            
+            # Start sleeping
+            self.pet_state.current_animation = 'sleeping'
+            self.pet_state.is_interacting = True
+            self.pet_state.is_sleeping = True
+            self.pet_state.sleep_start_time = datetime.now()
+            self.pet_state.sleep_duration = sleep_duration
+            self.pet_state.sleep_end_time = datetime.now().timestamp() + (sleep_duration / 1000)
+            
+            # Create sleep timer display
+            if hasattr(self, 'create_sleep_timer'):
+                self.create_sleep_timer()
+            
+            # Start energy recovery
+            if hasattr(self, 'start_energy_recovery'):
+                self.start_energy_recovery()
+            
+            # Show sleeping message
+            message_text = f"Pet is now sleeping! ({int(missing_energy)}% energy to recover)"
+            
+            # Method 1: Speech bubble
+            if hasattr(self.pet_state, 'speech_bubble') and self.pet_state.speech_bubble:
+                self.pet_state.speech_bubble.show_bubble('custom', message_text)
+            # Method 2: Canvas text
+            elif hasattr(self.pet_state, 'canvas'):
+                if hasattr(self.pet_state, 'sleep_message_id'):
+                    self.pet_state.canvas.delete(self.pet_state.sleep_message_id)
+                self.pet_state.sleep_message_id = self.pet_state.canvas.create_text(
+                    128, 30, text=message_text,
+                    font=("Arial", 12, "bold"), fill="white"
+                )
+                self.root.after(3000, lambda: self.pet_state.canvas.delete(self.pet_state.sleep_message_id))
+            # Method 3: Inventory window fallback
+            else:
+                if self.inventory_window and self.inventory_window.winfo_exists():
+                    message = tk.Label(self.inventory_window, text=message_text,
+                                      bg=COLORS['success'], fg="white",
+                                      font=("Arial", 10, "bold"),
+                                      padx=10, pady=5)
+                    message.place(relx=0.5, rely=0.1, anchor="center")
+                    self.inventory_window.after(3000, message.destroy)
+            
+            return True
+        elif item.name == "First Aid":
+            # Heal the pet by 50%
+            current_health = self.pet_state.stats.get_stat('health')
+            health_to_add = 50
+            self.pet_state.stats.modify_stat('health', health_to_add)
+            
+            # Show message
+            if hasattr(self.pet_state, 'speech_bubble') and self.pet_state.speech_bubble:
+                self.pet_state.speech_bubble.show_bubble('custom', f"Pet healed by {health_to_add}%!")
+            else:
+                if self.inventory_window and self.inventory_window.winfo_exists():
+                    message = tk.Label(self.inventory_window, text=f"Pet healed by {health_to_add}%!",
+                                      bg=COLORS['success'], fg="white",
+                                      font=("Arial", 10, "bold"),
+                                      padx=10, pady=5)
+                    message.place(relx=0.5, rely=0.1, anchor="center")
+                    self.inventory_window.after(2000, message.destroy)
+            return True
+        elif item.name == "Enchanted Apple":
+            # Restore all stats to 100%
+            for stat in ['hunger', 'happiness', 'energy', 'health', 'cleanliness', 'social']:
+                self.pet_state.stats.modify_stat(stat, 100 - self.pet_state.stats.get_stat(stat))
+            
+            # Set Poop Chance to 0% - this would require modifying the poop system
+            # For now, we'll just show a message that this effect is not implemented
+            # In a real implementation, you would need to modify the poop system to set poop chance to 0%
+            
+            # Show message
+            if hasattr(self.pet_state, 'speech_bubble') and self.pet_state.speech_bubble:
+                self.pet_state.speech_bubble.show_bubble('custom', "All stats restored to 100%!")
+            else:
+                if self.inventory_window and self.inventory_window.winfo_exists():
+                    message = tk.Label(self.inventory_window, text="All stats restored to 100%!",
+                                      bg=COLORS['success'], fg="white",
+                                      font=("Arial", 10, "bold"),
+                                      padx=10, pady=5)
+                    message.place(relx=0.5, rely=0.1, anchor="center")
+                    self.inventory_window.after(2000, message.destroy)
+            return True
             
             # Calculate sleep time based on missing energy
             current_energy = self.pet_state.stats.stats.get('energy', 100)
@@ -822,20 +947,15 @@ class InventorySystem:
             self.start_energy_recovery()
             
             # Show sleeping message
-            print(f"[DEBUG] Pet attributes: {dir(self.pet_state)}")
-            print(f"[DEBUG] Has speech_bubble: {hasattr(self.pet_state, 'speech_bubble')}")
-            print(f"[DEBUG] Has canvas: {hasattr(self.pet_state, 'canvas')}")
             
             # Try multiple ways to show the message
             message_text = f"Pet is now sleeping! ({int(missing_energy)}% energy to recover)"
             
             # Method 1: Speech bubble
             if hasattr(self.pet_state, 'speech_bubble') and self.pet_state.speech_bubble:
-                print("[DEBUG] Showing sleep message via speech bubble")
                 self.pet_state.speech_bubble.show_bubble('custom', message_text)
             # Method 2: Canvas text
             elif hasattr(self.pet_state, 'canvas'):
-                print("[DEBUG] Showing sleep message via canvas")
                 if hasattr(self.pet_state, 'sleep_message_id'):
                     self.pet_state.canvas.delete(self.pet_state.sleep_message_id)
                 self.pet_state.sleep_message_id = self.pet_state.canvas.create_text(
@@ -845,7 +965,6 @@ class InventorySystem:
                 self.parent.after(3000, lambda: self.pet_state.canvas.delete(self.pet_state.sleep_message_id))
             # Method 3: Inventory window fallback
             else:
-                print("[DEBUG] No speech bubble or canvas, using inventory window")
                 if self.inventory_window and self.inventory_window.winfo_exists():
                     message = tk.Label(self.inventory_window, text=message_text,
                                       bg=COLORS['success'], fg="white",
@@ -974,9 +1093,7 @@ class InventorySystem:
 
     def create_sleep_timer(self):
         """Create and display sleep timer countdown"""
-        print("[DEBUG] Creating sleep timer")
         if not hasattr(self.pet_state, 'canvas'):
-            print("[DEBUG] No canvas found for sleep timer")
             return
             
         # Remove existing timer if any
@@ -992,7 +1109,6 @@ class InventorySystem:
             tags="sleep_timer"
         )
         
-        print("[DEBUG] Sleep timer created successfully")
         self.update_sleep_timer()
 
     def update_sleep_timer(self):
@@ -1026,14 +1142,11 @@ class InventorySystem:
     def start_energy_recovery(self):
         """Start gradual energy recovery during sleep"""
         if not hasattr(self.pet_state, 'is_sleeping') or not self.pet_state.is_sleeping:
-            print("[DEBUG] Energy recovery stopped - not sleeping")
             return
             
         current_energy = self.pet_state.stats.stats.get('energy', 100)
-        print(f"[DEBUG] Energy recovery: current={current_energy}, sleeping={self.pet_state.is_sleeping}")
         
         if current_energy >= 100:
-            print("[DEBUG] Energy full, waking up pet")
             self.wake_up_pet()
             return
             
@@ -1049,7 +1162,6 @@ class InventorySystem:
         if hunger_drop > 0:
             self.pet_state.stats.modify_stat('hunger', -hunger_drop)
         
-        print(f"[DEBUG] Recovery: +{recovery_rate}% energy, -{hunger_drop}% hunger")
         
         # Update stats display
         if hasattr(self.pet_state, 'update_stats_display'):
@@ -1057,34 +1169,27 @@ class InventorySystem:
         
         # Continue recovery if still sleeping
         if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
-            print("[DEBUG] Scheduling next energy recovery")
             self.root.after(2000, self.start_energy_recovery)
 
     def wake_up_pet(self):
         """Wake up the pet from sleep"""
-        print("[DEBUG] wake_up_pet called")
         if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
-            print("[DEBUG] Waking up pet")
             self.pet_state.is_sleeping = False
             self.pet_state.sleep_start_time = None  # Reset sleep_start_time
             self.pet_state.current_animation = 'Standing'
             self.pet_state.is_interacting = False
-            print(f"[DEBUG] Set is_sleeping to {self.pet_state.is_sleeping}, sleep_start_time to None, current_animation to {self.pet_state.current_animation}")
 
             # Clear sleep timer
             self.clear_sleep_timer()
             
             # Cancel any pending sleep timers
             if hasattr(self.pet_state, 'sleep_timer'):
-                print("[DEBUG] Canceling pending sleep timers")
                 self.root.after_cancel(self.pet_state.sleep_timer)
             
             # Show wake up message
             if hasattr(self.pet_state, 'speech_bubble') and self.pet_state.speech_bubble:
-                print("[DEBUG] Showing wake up message via speech bubble")
                 self.pet_state.speech_bubble.show_bubble('custom', "Pet woke up!")
             else:
-                print("[DEBUG] Showing wake up message in inventory window")
                 if self.inventory_window and self.inventory_window.winfo_exists():
                     message = tk.Label(self.inventory_window, text="Pet woke up!",
                                       bg=COLORS['info'], fg="white",
@@ -1445,6 +1550,10 @@ class InventorySystem:
                 effects = "\n\nEffects:\n- Cleans 1 poop\n- +15% Cleanliness"
             elif item_id == "shower":
                 effects = "\n\nEffects:\n- +15% Cleanliness"
+            elif item_id == "first_aid":
+                effects = "\n\nEffects:\n- +50% Health"
+            elif item_id == "enchanted_apple":
+                effects = "\n\nEffects:\n- Restores all stats to 100%\n- Sets Poop Chance to 0%"
             # For all food items, use their stored description
             else:
                 effects = "\n\nEffects:\n" + item.description
@@ -1472,6 +1581,10 @@ class InventorySystem:
         # Special case for free items
         if item_id in ["toilet_paper", "shower", "sleeping"]:
             return 0
+        if item_id == "first_aid":
+            return 100
+        if item_id == "enchanted_apple":
+            return 250
         if item_id == "evo1":
             return 10000
         if item_id == "evo2":
@@ -1479,39 +1592,23 @@ class InventorySystem:
             
         # Get price from food items list (organized by price tiers)
         food_items = [
-            # Basic/Cheap Items (15-25 coins)
-            ("bun", 15), ("jam", 15), ("bread", 20), ("donut", 20),
-            ("friedegg", 20), ("jelly", 20), ("potatochips_bowl", 20),
-            ("bagel", 25), ("bacon", 25), ("cookies", 25), ("eggtart", 25),
-            ("garlicbread", 25), ("loafbread", 25), ("popcorn_bowl", 25),
+            # Basic Items (15-35 coins)
+            ("apple", 15), ("donut", 25), ("croissant", 35),
             
-            # Mid-tier Items (30-35 coins)
-            ("cheesepuff_bowl", 30), ("frenchfries", 30), ("hotdog", 30),
-            ("nacho", 30), ("pudding", 30), ("sandwich", 30), ("waffle", 30),
-            ("baguette", 35), ("chocolate", 35), ("dumplings", 35),
-            ("gingerbreadman", 35), ("meatball", 35), ("pancakes", 35),
-            ("ramen", 35), ("taco", 35),
+            # Mid-tier Items (45-75 coins)
+            ("hotdog", 45), ("sandwich", 55), ("bacon", 65), ("cupcake", 75),
             
-            # Good Items (40-45 coins)
-            ("burrito", 40), ("eggsalad_bowl", 40), ("fruitcake", 40),
-            ("macncheese", 40), ("omlet", 40), ("burger", 45),
-            ("icecream_bowl", 45), ("lemonpie", 45), ("applepie", 45),
-            ("spaghetti", 45),
+            # Good Items (85-125 coins)
+            ("cheese", 85), ("burger", 95), ("ice_cream", 105),
             
-            # Premium Items (50-60 coins)
-            ("cheesecake", 50), ("curry", 50), ("pizza", 50), ("sushi", 50),
-            ("chocolatecake", 55), ("salmon", 55), ("strawberrycake", 55),
-            ("giantgummybear", 60), ("roastedchicken", 60),
-            
-            # Luxury Item (70 coins)
-            ("steak", 70)
+            # Premium Items (135-200 coins)
+            ("chocolate_bar", 135), ("cooked_fish", 165), ("sushi", 200)
         ]
         
         # Find matching item and return its price
         for food_id, price in food_items:
             if item_id == food_id:
                 return price
-                
         # Default price if not found
         return 10
 

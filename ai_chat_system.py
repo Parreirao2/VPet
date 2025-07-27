@@ -180,7 +180,6 @@ class AIChatSystem:
             return False
     
     def create_chat_window(self, parent_window=None):
-        print(f"[DEBUG] AIChatSystem.create_chat_window: parent_window={'valid' if parent_window else 'None'}")
         if self.chat_window and self.chat_window.winfo_exists():
             self.chat_window.lift()
             self.chat_window.focus_force()
@@ -198,15 +197,12 @@ class AIChatSystem:
             # Position to the right of the parent window
             x = parent_window.winfo_x() + parent_window.winfo_width()
             y = parent_window.winfo_y()
-            print(f"[DEBUG] Positioning chat window relative to parent: x={x}, y={y}")
-            print(f"[DEBUG] Parent window geometry: x={parent_window.winfo_x()}, y={parent_window.winfo_y()}, width={parent_window.winfo_width()}, height={parent_window.winfo_height()}")
             self.chat_window.geometry(f"+{x}+{y}")
             # Ensure the chat window is on top of the parent window
             self.chat_window.attributes('-topmost', True)
             # After a short delay, reset topmost to allow proper window layering
             self.chat_window.after(500, lambda: self.chat_window.attributes('-topmost', False))
         else:
-            print("[DEBUG] Positioning chat window with default positioning")
             # Default topmost behavior
             self.chat_window.attributes('-topmost', True)
             self.chat_window.after(100, lambda: self.chat_window.attributes('-topmost', False))
@@ -488,8 +484,8 @@ class AIChatSystem:
         if response and response.strip():
             try:
                 if hasattr(self.pet_manager, 'speech_bubble') and self.pet_manager.speech_bubble:
-                    # Call show_bubble with the response
-                    self.pet_manager.speech_bubble.show_bubble('custom', response, use_typewriter=False)
+                    # Call show_bubble with the response - disable typewriter effect
+                    self.pet_manager.speech_bubble.show_bubble('custom', response)
                     
                     # Set flag to indicate response bubble is active
                     self.response_bubble_active = True
@@ -503,6 +499,8 @@ class AIChatSystem:
             print(f"No response to display: '{response}'")
     
     def show_typewriter_response(self, full_text):
+        # This method is now deprecated - use show_ai_response instead
+        # But we'll keep it for backward compatibility and just show the full text immediately
         if self.is_typing:
             return
         
@@ -510,27 +508,8 @@ class AIChatSystem:
             self.is_typing = False
             return
             
-        self.is_typing = True
-        words = full_text.split()
-        current_text = ""
-        
-        def type_next_word(index=0):
-            nonlocal current_text
-            
-            if index < len(words):
-                if current_text:
-                    current_text += " "
-                current_text += words[index]
-                
-                # Use show_typewriter_bubble to update the existing bubble
-                self.pet_manager.speech_bubble.show_typewriter_bubble(current_text, is_complete=(index == len(words) - 1))
-                
-                delay = 300 if words[index].endswith(('.', '!', '?')) else 150
-                self.typing_timer = self.pet_manager.root.after(delay, lambda: type_next_word(index + 1))
-            else:
-                self.is_typing = False
-                # Ensure the final message is displayed and the bubble is set to clear after its duration
-                self.pet_manager.speech_bubble.show_typewriter_bubble(current_text, is_complete=True)
+        # Show the complete response immediately without typewriter effect
+        self.show_ai_response(full_text)
     
     def update_thinking_text(self):
         """Update the thinking bubble with animated dots"""

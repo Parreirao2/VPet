@@ -18,6 +18,7 @@ from poop_system import PoopSystem
 from inventory_system import InventorySystem
 from pet_animation import PetAnimation
 from pet_components import PetStats, PetGrowth
+from treasure_system import TreasureSystem
 
 
 class PetState:
@@ -79,7 +80,35 @@ class VirtualPet:
         
         self.root.wm_attributes('-transparentcolor', '#010101')
         
+        # Load settings FIRST before initializing context awareness
+        self.load_settings()
+        
+        # Initialize ContextAwareness if enabled (now uses the correct setting)
+        if self.settings.get('context_awareness_enabled', True):
+            try:
+                from context_awareness import ContextAwareness
+                self.context_awareness = ContextAwareness(self)
+            except ImportError as e:
+                pass
+            except Exception as e:
+                pass
+        else:
+            pass
+        
         self.animation = PetAnimation(root, self.canvas, self.pet_state, self.settings)
+        
+        # Add periodic context awareness check
+        def check_context_awareness():
+            if hasattr(self, 'context_awareness') and self.context_awareness:
+                try:
+                    self.context_awareness.update_context_awareness()
+                except Exception as e:
+                    pass
+            self.root.after(3000, check_context_awareness)
+        
+        # Start the periodic check if context awareness is enabled
+        if self.settings.get('context_awareness_enabled', True):
+            self.root.after(5000, check_context_awareness)
 
         self.speech_bubble = SpeechBubble(self.canvas, self.root)
         self.status_panel = SimpleStatusPanel(root, self)
@@ -94,6 +123,10 @@ class VirtualPet:
         print(f"Poop system initialized with realistic pressure-based mechanics")
         
         self.inventory_system = InventorySystem(self.root, self.canvas, self.pet_state)
+        
+        # Initialize treasure system
+        self.treasure_system = TreasureSystem(self.root, self.canvas, self.pet_state, self.inventory_system, self)
+        self.pet_state.treasure_system = self.treasure_system
         
         # Try to load existing save file on startup - moved here
         self.auto_load_pet()
@@ -119,8 +152,6 @@ class VirtualPet:
             self.animation.start_random_movement()
         
         self.setup_system_tray()
-        
-        self.load_settings()
         
         alpha = int(255 * (100 - self.settings['transparency']) / 100)
         self.root.attributes('-alpha', alpha/255)
@@ -228,7 +259,7 @@ class VirtualPet:
             if hasattr(self.pet_state, 'growth') and hasattr(self.pet_state.growth, 'evolve_to'):
                 # Reset sleep state if evolving while sleeping
                 if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
-                    self.pet_state.is_sleeping = False
+                    self.pet_state.is_sleeping = False  # This always resets sleep state!
                     self.pet_state.sleep_start_time = None
                     
                 success = self.pet_state.growth.evolve_to(new_stage)
@@ -256,7 +287,7 @@ class VirtualPet:
                 self.pet_state.stats.modify_stat('social', 20)
                 self.speech_bubble.show_bubble('happy')
                 
-                self.happiness_boost_cooldown = random.randint(180, 600)
+                self.happiness_boost_cooldown = 60  # Changed from random.randint(180, 600) to 60 seconds
                 self.last_happiness_boost_time = current_time
                 
                 if hasattr(self, 'animation_reset_timer') and self.animation_reset_timer:
@@ -267,21 +298,51 @@ class VirtualPet:
         self.last_click_time = current_time
 
     def handle_double_click(self, event):
-        """Handle double-click to wake up sleeping pet"""
-        if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
-            # Calculate distance from pet center
-            pet_x = self.canvas.winfo_width() // 2
-            pet_y = self.canvas.winfo_height() // 2
-            distance = ((event.x - pet_x) ** 2 + (event.y - pet_y) ** 2) ** 0.5
-            
-            if distance < 50:  # Click within pet area
+        """Handle double-click to wake up sleeping pet or increase happiness"""
+        # Calculate distance from pet center
+        pet_x = self.canvas.winfo_width() // 2
+        pet_y = self.canvas.winfo_height() // 2
+        distance = ((event.x - pet_x) ** 2 + (event.y - pet_y) ** 2) ** 0.5
+        
+        if distance < 50:  # Click within pet area
+            # Handle sleeping pet
+            if hasattr(self.pet_state, 'is_sleeping') and self.pet_state.is_sleeping:
                 if hasattr(self, 'inventory_system'):
                     self.inventory_system.wake_up_pet()
-                    # Reset sleep state after waking up
                     self.pet_state.is_sleeping = False
                     self.pet_state.sleep_start_time = None
-                    print("[DEBUG] Sleep state reset after double-click wake up")
-        
+                return  # Only return if pet was actually sleeping
+            
+            # Handle happiness boost for awake pets
+            current_time = time.time()
+            
+            # Check if enough time has passed since last double-click (60 seconds)
+            if not hasattr(self, 'last_double_click_time'):
+                self.last_double_click_time = 0
+                
+            if current_time - self.last_double_click_time >= 60:  # 1 minute cooldown
+                # Increase happiness by 10%
+                self.pet_state.stats.modify_stat('happiness', 10)
+                
+                # Show happy animation
+                self.pet_state.current_animation = 'happy'
+                self.pet_state.is_interacting = True
+                
+                # Show speech bubble
+                if hasattr(self, 'speech_bubble'):
+                    self.speech_bubble.show_bubble('happy')
+                
+                # Update last double-click time
+                self.last_double_click_time = current_time
+                
+                # Schedule animation reset
+                self.schedule_resume_movement(3000)
+            else:
+                # Show message that pet is still on cooldown
+                remaining_time = int(60 - (current_time - self.last_double_click_time))
+                if hasattr(self, 'speech_bubble'):
+                    self.speech_bubble.show_bubble('happy', f"Wait {remaining_time} more seconds!")
+
     def reset_animation_state(self):
         if getattr(self.pet_state, 'is_sleeping', False):
             return
@@ -304,8 +365,6 @@ class VirtualPet:
         if self._name == "UUDDLRLRBA":
             self.pet_state.currency += 10000000
             print("Cheat code activated! 10,000,000 coins added.")
-            # Optionally, reset the name after applying the cheat
-            # self._name = "My Pet" # Uncomment if you want the name to revert
 
     def reset_pet(self):
         self.pet_state = PetState()
@@ -373,7 +432,6 @@ class VirtualPet:
             minutes = int(elapsed // 60)
             seconds = int(elapsed % 60)
             summary['sleep_timer'] = f"{minutes:02d}:{seconds:02d}"
-            print(f"[TIMER] Added sleep timer to summary: {summary['sleep_timer']}")
             
         return summary
         
@@ -405,7 +463,12 @@ class VirtualPet:
             'game_progress': self.pet_state.game_progress,
             'inventory': {item_id: item.quantity for item_id, item in self.inventory_system.items.items() if not item.unlimited},
             'creation_date': datetime.now().isoformat(),
-            'save_date': datetime.now().isoformat()
+            'save_date': datetime.now().isoformat(),
+            'is_sleeping': self.pet_state.is_sleeping,
+            'sleep_start_time': self.pet_state.sleep_start_time.isoformat() if self.pet_state.sleep_start_time else None,
+            'sleep_duration': getattr(self.pet_state, 'sleep_duration', None),
+            'poop_system_dirty': self.pet_state.poop_system_dirty,
+            'treasure_system': self.treasure_system.get_save_data() if hasattr(self, 'treasure_system') else None  # Add this line
         }
         
         filename = f"{self.name.replace(' ', '_')}_save.json"
@@ -432,11 +495,11 @@ class VirtualPet:
             print(f"Failed to save pet: {e}")
             return False, f"Failed to save pet: {e}"
             
-            return True, filename
+            return True, filename  # UNREACHABLE CODE
         except Exception as e:
             print(f"Error saving pet: {e}")
             return False, str(e)
-    
+
     def get_save_files(self):
         save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
         os.makedirs(save_path, exist_ok=True)
@@ -473,10 +536,9 @@ class VirtualPet:
             with open(filepath, 'r') as f:
                 save_data = json.load(f)
             
-            self.name = save_data.get('name', 'Pet') # Use the setter for pet name
+            self.name = save_data.get('name', 'Pet') 
             
             stats_dict = save_data.get('stats', {})
-            # Set stats directly instead of using modify_stat to avoid calculation errors
             for stat in ['hunger', 'happiness', 'energy', 'health', 'cleanliness', 'social']:
                 if stat in stats_dict:
                     self.pet_state.stats.stats[stat] = max(0, min(100, stats_dict[stat]))
@@ -493,7 +555,6 @@ class VirtualPet:
             
             if 'stage' in save_data:
                 self.pet_state.stage = save_data['stage']
-                # Sync the growth stage as well
                 if hasattr(self.pet_state, 'growth'):
                     self.pet_state.growth.stage = save_data['stage']
             
@@ -510,19 +571,27 @@ class VirtualPet:
             if 'game_progress' in save_data:
                 self.pet_state.game_progress = save_data['game_progress']
             
-            # Reset sleep state when loading to prevent inconsistent states
-            if hasattr(self.pet_state, 'is_sleeping'):
-                self.pet_state.is_sleeping = False
+            # Properly handle sleep state restoration
+            self.pet_state.is_sleeping = save_data.get('is_sleeping', False)
             if 'sleep_start_time' in save_data and save_data['sleep_start_time']:
                 self.pet_state.sleep_start_time = datetime.fromisoformat(save_data['sleep_start_time'])
             else:
                 self.pet_state.sleep_start_time = None
-            print("[LOAD] Sleep state reset after loading")
-            
-            # self.pet_state.current_animation = 'special' # Removed hardcoded animation
+                
+            # Restore additional state data
+            if 'sleep_duration' in save_data:
+                self.pet_state.sleep_duration = save_data['sleep_duration']
+                
+            if 'poop_system_dirty' in save_data:
+                self.pet_state.poop_system_dirty = save_data['poop_system_dirty']
             
             self.last_save = os.path.basename(filepath)
             
+            if 'treasure_system' in save_data and hasattr(self, 'treasure_system'):
+                self.treasure_system.load_save_data(save_data['treasure_system'])
+        
+                self.last_save = os.path.basename(filepath)
+        
             return self, None
         except json.JSONDecodeError as e:
             print(f"Error parsing save file: {e}")
@@ -557,6 +626,11 @@ class VirtualPet:
             self.schedule_resume_movement(5000)
             return result
         elif interaction_type == 'play':
+            # Wake up pet if sleeping
+            if self.pet_state.is_sleeping:
+                if hasattr(self, 'inventory_system'):
+                    self.inventory_system.wake_up_pet()
+            
             self.pet_state.current_animation = 'playing'
             self.pet_state.stats.modify_stat('happiness', 15)
             self.pet_state.stats.modify_stat('energy', -10)
@@ -626,9 +700,6 @@ class VirtualPet:
         x = self.root.winfo_x() + event.x
         y = self.root.winfo_y() + event.y
         
-        print(f"DEBUG: Right click at event.x={event.x}, event.y={event.y}")
-        print(f"DEBUG: Pet window position: x={self.root.winfo_x()}, y={self.root.winfo_y()}")
-        print(f"DEBUG: Calculated panel position: x={x}, y={y}")
         
         self.status_panel.show_panel(x, y)
         self.schedule_resume_movement(5000)
@@ -647,10 +718,8 @@ class VirtualPet:
         if self.sleep_timer_label:
             self.sleep_timer_label.destroy()
             self.sleep_timer_label = None
-        print("[DEBUG] Status panel closed - timer updates stopped")
     
     def show_inventory(self, parent_window=None):
-        print(f"[DEBUG] pet_manager.show_inventory: parent_window={'valid' if parent_window else 'None'}")
         self.inventory_system.show_inventory(parent_window=parent_window)
         
     def update_sleep_timer_display(self):
@@ -699,7 +768,6 @@ class VirtualPet:
             self.sleep_timer_label = None
         
     def show_game_hub(self, parent_window=None):
-        print(f"[DEBUG] pet_manager.show_game_hub: parent_window={'valid' if parent_window else 'None'}")
         from game_hub import GameHub
         from currency_system import CurrencySystem
         
@@ -795,6 +863,10 @@ class VirtualPet:
         except Exception as e:
             print(f"Error saving pet data on exit: {e}")
         
+        # Clean up treasure system
+        if hasattr(self, 'treasure_system'):
+            self.treasure_system.cleanup()
+            
         if hasattr(self, 'poop_system'):
             self.poop_system.cleanup()
             
@@ -929,5 +1001,3 @@ if __name__ == "__main__":
     
     # Start the main GUI loop
     root.mainloop()
-# Diagnostic logging for sleep timer visibility
-# Removed debug statement that caused NameError
