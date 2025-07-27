@@ -50,10 +50,11 @@
 
 ### 🎮 **Interactive Gameplay**
 - **📊 6 Core Stats**: Hunger, Happiness, Energy, Health, Cleanliness, Social
-- **🍔 13 Food Items**: From apple to donut, each with unique effects
+- **🍔 13 Food Items**: From apple to sushi, each with unique stat effects
 - **🎲 3 Mini-Games**: Number Guesser, Reaction Test, Ball Clicker
 - **💰 Economy System**: Earn coins through games and care activities
 - **🧹 Realistic Care**: Clean up after your pet, manage hygiene
+- **🏆 Treasure Chests**: Hourly treasure spawns with valuable rewards
 
 ### 🏆 **Advanced Features**
 - **👁️ Context Awareness**: Pet monitors your apps and comments intelligently
@@ -110,24 +111,79 @@ python main.py
 3. **🧹 Clean** up waste to maintain hygiene
 4. **💬 Chat** with AI for social interaction
 5. **😴 Let rest** when energy is low
+6. **🏆 Find** treasure chests that spawn hourly
 
 ---
 
 ## 🛒 **Shop & Items**
 
-### **Food Categories**
-| **Category** | **Price Range** | **Best For** |
-|:-------------|:----------------|:-------------|
-| **🥖 Bakery** | 15-35 coins | Quick hunger fix |
-| **🍰 Desserts** | 20-60 coins | Happiness boost |
-| **🍖 Main Dishes** | 30-70 coins | Full meals |
-| **🍜 International** | 35-50 coins | Balanced stats |
+### **Food Items** *(Complete Inventory)*
+
+#### **🥖 Basic Tier** *(15-35 coins)*
+| **Item** | **Price** | **Effects** |
+|:---------|:----------|:------------|
+| **🍎 Apple** | 15 coins | Hunger: +8, Happiness: +3, Energy: +4, Health: +6, Cleanliness: +1 |
+| **🍩 Donut** | 25 coins | Hunger: +6, Happiness: +8, Energy: +10, Health: -4, Cleanliness: -3 |
+| **🥐 Croissant** | 35 coins | Hunger: +12, Happiness: +5, Energy: +6, Health: +2, Cleanliness: -2 |
+
+#### **🍔 Mid-Tier** *(45-75 coins)*
+| **Item** | **Price** | **Effects** |
+|:---------|:----------|:------------|
+| **🌭 Hotdog** | 45 coins | Hunger: +15, Happiness: +6, Energy: +8, Health: -2, Cleanliness: -4 |
+| **🥪 Sandwich** | 55 coins | Hunger: +18, Happiness: +7, Energy: +10, Health: +4, Cleanliness: -1 |
+| **🥓 Bacon** | 65 coins | Hunger: +10, Happiness: +8, Energy: +12, Health: -3, Cleanliness: -5 |
+| **🧁 Cupcake** | 75 coins | Hunger: +8, Happiness: +12, Energy: +15, Health: -5, Cleanliness: -4 |
+
+#### **🍕 Good Tier** *(85-125 coins)*
+| **Item** | **Price** | **Effects** |
+|:---------|:----------|:------------|
+| **🧀 Cheese** | 85 coins | Hunger: +20, Happiness: +8, Energy: +6, Health: +8, Cleanliness: -2 |
+| **🍔 Burger** | 95 coins | Hunger: +25, Happiness: +10, Energy: +12, Health: -1, Cleanliness: -6 |
+| **🍦 Ice Cream** | 105 coins | Hunger: +12, Happiness: +15, Energy: +18, Health: -2, Cleanliness: -3 |
+
+#### **🍰 Premium Tier** *(135-200 coins)*
+| **Item** | **Price** | **Effects** |
+|:---------|:----------|:------------|
+| **🍫 Chocolate Bar** | 135 coins | Hunger: +6, Happiness: +20, Energy: +25, Health: -6, Cleanliness: -4 |
+| **🐟 Cooked Fish** | 165 coins | Hunger: +28, Happiness: +12, Energy: +15, Health: +15, Cleanliness: -3 |
+| **🍣 Sushi** | 200 coins | Hunger: +30, Happiness: +18, Energy: +20, Health: +18, Cleanliness: +2 |
 
 ### **Special Items**
-- **🧻 Toilet Paper**: Clean waste (FREE)
-- **🚿 Shower**: +15% cleanliness (FREE)
-- **🧬 Evo1**: Instant evolution (10,000 coins)
-- **✨ Evo2**: Secret special form (1,000,000 coins)
+| **Item** | **Price** | **Description** |
+|:---------|:----------|:----------------|
+| **🧻 Toilet Paper** | FREE | Clean up waste (unlimited use) |
+| **🚿 Shower** | FREE | Increases cleanliness by 15% (unlimited use) |
+| **😴 Sleep** | FREE | Put your pet to sleep to recover energy gradually |
+| **🩹 First Aid** | 100 coins | Heals your pet by 50% |
+| **🍎✨ Enchanted Apple** | 250 coins | Restores all stats to 100% and sets Poop Chance to 0% |
+| **🧬 Evo Spirit** | 10,000 coins | Instant evolution to next stage |
+| **✨ Special Evo Spirit** | 1,000,000 coins | Evolution to secret special form |
+
+---
+
+## 🏆 **Treasure Chest System** *(NEW!)*
+
+### **🎁 Hourly Rewards**
+Treasure chests spawn randomly every hour (20% chance) and disappear after 5 minutes if not found!
+
+#### **💰 Coin Rewards**
+- **Base Reward**: 50-300 coins per chest
+
+#### **📦 Item Rewards** *(Probability-Based)*
+
+| **Tier** | **Chance** | **Items** | **Quantity** |
+|:---------|:-----------|:----------|:-------------|
+| **🔵 Basic** | 60% | Apple, Donut, Croissant | 1-5 items |
+| **🟢 Mid-Tier** | 20% | Hotdog, Sandwich, Bacon, Cupcake | 1-3 items |
+| **🟡 Good** | 10% | Cheese, Burger, Ice Cream | 1-3 items |
+| **🔴 Premium** | 5% | Chocolate Bar, Cooked Fish, Sushi | 1 item |
+| **🟣 Exotic** | 5% | Enchanted Apple, First Aid | 1 item |
+
+### **🔍 How to Find Treasures**
+1. **👀 Watch** for glowing treasure chests on your screen
+2. **⚡ Act Fast** - chests disappear after 5 minutes
+3. **💎 Click** the chest to claim your rewards
+4. **💾 Auto-Save** - progress is automatically saved after each treasure
 
 ---
 
