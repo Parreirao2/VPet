@@ -273,7 +273,12 @@ class AIChatSystem:
                 return []
             
             models = ollama.list()
-            if isinstance(models, dict) and 'models' in models:
+            # Handle different response formats from Ollama library
+            if hasattr(models, 'models'):
+                # Newer Ollama library returns ListResponse object
+                return [model.model for model in models.models]
+            elif isinstance(models, dict) and 'models' in models:
+                # Older Ollama library returns dictionary
                 return [model['name'] for model in models['models']]
             return []
         except Exception as e:
@@ -818,6 +823,9 @@ class ChatProviderDialog:
         self.parent = parent
         self.chat_system = chat_system
         self.dialog = None
+        # Keep references to dynamic widgets
+        self.ollama_model_menu = None
+        self.ollama_no_models_label = None
 
     def show(self):
         self.dialog = tk.Toplevel(self.parent)
@@ -893,13 +901,25 @@ class ChatProviderDialog:
         self.ollama_frame.pack(fill=tk.X, pady=(0, 15))
         ttk.Label(self.ollama_frame, text="Make sure Ollama is running locally.", font=('Arial', 9), foreground='#666').pack(anchor='w')
         ttk.Label(self.ollama_frame, text="Available Models:").pack(anchor='w', pady=(5,0))
+        
+        # Refresh Ollama models when dialog opens
         self.ollama_models = self.chat_system.get_ollama_models()
         self.ollama_model_var = tk.StringVar(value=self.chat_system.ollama_model)
+        
+        # Check if previously selected Ollama model still exists
+        if self.chat_system.chat_provider == 'ollama' and self.chat_system.ollama_model:
+            if self.chat_system.ollama_model not in self.ollama_models:
+                # Display message if previously selected model doesn't exist anymore
+                messagebox.showwarning("Model Not Found",
+                                     f"The previously selected Ollama model '{self.chat_system.ollama_model}' is no longer available. Please select a different model.")
+        
+        # Create initial Ollama model menu or label
         if self.ollama_models:
             self.ollama_model_menu = ttk.Combobox(self.ollama_frame, textvariable=self.ollama_model_var, values=self.ollama_models, state="readonly")
             self.ollama_model_menu.pack(fill=tk.X, pady=5)
         else:
-            ttk.Label(self.ollama_frame, text="No Ollama models found.", font=('Arial', 9), foreground='#ff6666').pack(anchor='w', pady=5)
+            self.ollama_no_models_label = ttk.Label(self.ollama_frame, text="No Ollama models found.", font=('Arial', 9), foreground='#ff6666')
+            self.ollama_no_models_label.pack(anchor='w', pady=5)
 
         # Instructions
         self.instructions_label = ttk.Label(content_frame, text="", font=('Arial', 9), justify=tk.LEFT)
@@ -914,7 +934,18 @@ class ChatProviderDialog:
         cancel_button = SimpleButton(button_frame, text="Cancel", command=self.cancel, bg=COLORS['error'], fg="white")
         cancel_button.pack(side=tk.RIGHT, padx=5)
 
-        self.on_provider_change()
+        # Set initial state for provider frames without triggering model refresh
+        if self.chat_system.chat_provider == 'gemini':
+            for child in self.gemini_frame.winfo_children():
+                child.config(state='normal')
+            for child in self.ollama_frame.winfo_children():
+                child.config(state='disabled')
+        else:
+            for child in self.ollama_frame.winfo_children():
+                child.config(state='normal')
+            for child in self.gemini_frame.winfo_children():
+                child.config(state='disabled')
+        
         self.dialog.protocol("WM_DELETE_WINDOW", self.cancel)
     
     def on_provider_change(self):
@@ -931,6 +962,30 @@ class ChatProviderDialog:
 3. Paste it above
 4. Select your preferred model"""
         else:
+            # Refresh Ollama models when switching to Ollama provider
+            self.ollama_models = self.chat_system.get_ollama_models()
+            self.ollama_model_var = tk.StringVar(value=self.chat_system.ollama_model)
+            
+            # Remove existing model menu or label if present
+            if self.ollama_model_menu:
+                self.ollama_model_menu.destroy()
+                self.ollama_model_menu = None
+            if self.ollama_no_models_label:
+                self.ollama_no_models_label.destroy()
+                self.ollama_no_models_label = None
+            
+            # Add new model menu or label
+            if self.ollama_models:
+                self.ollama_model_menu = ttk.Combobox(self.ollama_frame, textvariable=self.ollama_model_var, values=self.ollama_models, state="readonly")
+                self.ollama_model_menu.pack(fill=tk.X, pady=5)
+                # Check if previously selected model still exists
+                if self.chat_system.ollama_model and self.chat_system.ollama_model not in self.ollama_models:
+                    messagebox.showwarning("Model Not Found",
+                                         f"The previously selected Ollama model '{self.chat_system.ollama_model}' is no longer available. Please select a different model.")
+            else:
+                self.ollama_no_models_label = ttk.Label(self.ollama_frame, text="No Ollama models found.", font=('Arial', 9), foreground='#ff6666')
+                self.ollama_no_models_label.pack(anchor='w', pady=5)
+            
             for child in self.ollama_frame.winfo_children():
                 child.config(state='normal')
             for child in self.gemini_frame.winfo_children():
@@ -943,7 +998,13 @@ class ChatProviderDialog:
         
         if hasattr(self, 'instructions_label'):
             self.instructions_label.config(text=instructions_text)
-    
+     
+    def cancel(self):
+        """Cancel the dialog without saving changes"""
+        if self.dialog:
+            self.dialog.destroy()
+        self.dialog = None
+     
     def save_and_test(self):
         provider = self.provider_var.get()
         

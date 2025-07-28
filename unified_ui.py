@@ -1645,8 +1645,6 @@ class SimpleStatusPanel:
         self.panel_window.lift()
         self.panel_window.attributes('-topmost', True)
         
-        # After a short delay, reset topmost to allow proper window layering
-        self.panel_window.after(500, lambda: self.panel_window.attributes('-topmost', False))
         # Check the final position
         final_x = self.panel_window.winfo_x()
         final_y = self.panel_window.winfo_y()
