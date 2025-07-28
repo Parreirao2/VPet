@@ -1,6 +1,0 @@
-{
-  "api_key": null,
-  "selected_model": "gemini-2.5-flash",
-  "chat_provider": "ollama",
-  "ollama_model": "gemma3:1b"
-}
