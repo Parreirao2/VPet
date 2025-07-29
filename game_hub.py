@@ -765,12 +765,12 @@ class GameHub:
         self.start_energy_monitoring()
         self.window.protocol("WM_DELETE_WINDOW", self.on_window_close)
     def start_energy_monitoring(self):
-        """Start continuous monitoring of pet energy levels""""
+        """Start continuous monitoring of pet energy levels"""
         if self.energy_check_active:
             self.check_energy_level()
             self.window.after(2000, self.start_energy_monitoring)
     def check_energy_level(self):
-        """Check if pet energy has dropped below 5% and close game hub if so""""
+        """Check if pet energy has dropped below 5% and close game hub if so"""
         if not self.energy_check_active:
             return
         if self.pet_state and hasattr(self.pet_state, 'stats'):
@@ -783,7 +783,7 @@ class GameHub:
             except Exception as e:
                 pass
     def disable_all_games(self):
-        """Disable all game interactions when energy is too low""""
+        """Disable all game interactions when energy is too low"""
         try:
             if hasattr(self, 'number_guesser_tab'):
                 self.disable_game_tab(self.number_guesser_tab)
@@ -796,14 +796,14 @@ class GameHub:
         except Exception as e:
             pass
     def disable_game_tab(self, game_tab):
-        """Disable all interactive elements in a game tab""""
+        """Disable all interactive elements in a game tab"""
         try:
             if hasattr(game_tab, 'frame'):
                 self.disable_widget_children(game_tab.frame)
         except Exception as e:
             pass
     def disable_widget_children(self, widget):
-        """Recursively disable all children of a widget""""
+        """Recursively disable all children of a widget"""
         try:
             for child in widget.winfo_children():
                 widget_type = child.winfo_class()
@@ -823,7 +823,7 @@ class GameHub:
         except Exception as e:
             pass
     def show_energy_depleted_message(self):
-        """Show message when energy drops below 5% during gameplay and close game hub""""
+        """Show message when energy drops below 5% during gameplay and close game hub"""
         pet_name = "Your pet"
         if hasattr(self.pet_state, 'pet_manager') and hasattr(self.pet_state.pet_manager, 'name'):
             pet_name = self.pet_state.pet_manager.name
@@ -871,7 +871,7 @@ class GameHub:
         close_button.pack(pady=20)
         message_window.after(5000, close_all)
     def show_tired_message(self):
-        """Show a message when the pet is too tired to play games""""
+        """Show a message when the pet is too tired to play games"""
         pet_name = "Your pet"
         if hasattr(self.pet_state, 'pet_manager') and hasattr(self.pet_state.pet_manager, 'name'):
             pet_name = self.pet_state.pet_manager.name
@@ -910,7 +910,7 @@ class GameHub:
                                borderwidth=2)
         close_button.pack(pady=15)
     def on_window_close(self):
-        """Handle window close event""""
+        """Handle window close event"""
         self.energy_check_active = False
         self.window.destroy()
     def create_number_guesser_game(self, level=1):

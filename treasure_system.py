@@ -78,8 +78,8 @@ class TreasureSystem:
         current_date = current_time.date()
         
         # Check if we already spawned a chest today
-        if (self.last_chest_spawn_date == current_date or 
-            current_hour == self.last_chest_hour or 
+        if (self.last_chest_spawn_date == current_date or
+            current_hour == self.last_chest_hour or
             self.chest_active):
             return
         
@@ -134,13 +134,12 @@ class TreasureSystem:
         self.chest_window.geometry(f"{chest_w + 40}x{chest_h + 40}+{chest_x}+{chest_y}")
         
         # Create chest canvas with padding for glow effect
-        # Use a different background color that won't interfere with transparency
-        chest_canvas = tk.Canvas(self.chest_window, width=chest_w + 40, height=chest_h + 40, 
-                                highlightthickness=0, bg='#000001')  # Changed from #010101
+        chest_canvas = tk.Canvas(self.chest_window, width=chest_w + 40, height=chest_h + 40,
+                                highlightthickness=0, bg='white')
         chest_canvas.pack()
         
-        # Make background transparent (use the new background color)
-        self.chest_window.wm_attributes('-transparentcolor', '#000001')
+        # Make white background transparent
+        self.chest_window.wm_attributes('-transparentcolor', 'white')
         
         # Add chest image at center
         chest_canvas.create_image((chest_w + 40) // 2, (chest_h + 40) // 2, image=self.chest_image)
@@ -151,9 +150,8 @@ class TreasureSystem:
         # Add glow effect
         self.add_glow_effect(chest_canvas, chest_w, chest_h)
         
-        # Bind click event
+        # Bind click event only to the canvas
         chest_canvas.bind('<Button-1>', self.on_chest_clicked)
-        self.chest_window.bind('<Button-1>', self.on_chest_clicked)
         
         # Set chest as active
         self.chest_active = True
