@@ -57,7 +57,10 @@
 - **🏆 Treasure Chests**: Hourly treasure spawns with valuable rewards
 
 ### 🏆 **Advanced Features**
-- **👁️ Context Awareness**: Pet monitors your apps and comments intelligently
+- **👁️ Context Awareness**:
+  - Monitors active applications and comments intelligently
+  - Avoids overlapping with active windows
+  - Adapts behavior based on user activity
 - **🎨 Customization**: Colors, sizes, transparency, behavior settings
 - **💾 Auto-Save**: Never lose progress with 5-minute auto-saves
 - **🖥️ Desktop Integration**: Always-on-top, multi-monitor support
@@ -287,6 +290,25 @@ Treasure chests spawn randomly every hour (20% chance) and disappear after 5 min
 - **🔄 Auto-Start**: Launch with Windows
 
 ---
+
+## 🧠 **Context Awareness**
+
+VPet intelligently monitors your desktop activity to enhance interaction:
+
+### **Window Awareness**
+- Dynamically avoids overlapping with active application windows
+- Adjusts position based on foreground application focus
+- Stays visible without obstructing critical UI elements
+
+### **Application Monitoring**
+- Detects when you're using specific applications (browsers, IDEs, games)
+- Generates context-appropriate comments about your activities
+- Learns from your usage patterns over time
+
+### **Behavior Adaptation**
+- Reduces movement during focused work sessions
+- Increases interaction during idle periods
+- Adjusts notification frequency based on activity level
 
 ## 🏗️ **Technical Architecture**
 
