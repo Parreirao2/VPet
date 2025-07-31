@@ -196,7 +196,22 @@ class SimpleSettingsWindow:
         self._create_save_tab(save_tab)
         self._create_advanced_tab(advanced_tab)
     def _create_general_tab(self, parent):
-        name_frame = ttk.LabelFrame(parent, text="Pet Name", padding=10)
+        canvas_frame = ttk.Frame(parent)
+        canvas_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        scrollbar = ttk.Scrollbar(canvas_frame, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas = tk.Canvas(canvas_frame, yscrollcommand=scrollbar.set, bg=COLORS['background'])
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=canvas.yview)
+        content_frame = ttk.Frame(canvas, padding=5)
+        canvas_window = canvas.create_window((0, 0), window=content_frame, anchor='nw')
+        def configure_scroll_region(event):
+            canvas.configure(scrollregion=canvas.bbox('all'))
+        content_frame.bind('<Configure>', configure_scroll_region)
+        def configure_canvas_window(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        canvas.bind('<Configure>', configure_canvas_window)
+        name_frame = ttk.LabelFrame(content_frame, text="Pet Name", padding=10)
         name_frame.pack(fill=tk.X, padx=10, pady=10)
         ttk.Label(name_frame, text=f"Current Name: {self.pet_manager.name}").pack(anchor="w")
         name_entry_frame = ttk.Frame(name_frame)
@@ -207,7 +222,7 @@ class SimpleSettingsWindow:
         change_btn = SimpleButton(name_frame, text="Change Name",
                                 command=lambda: self.change_pet_name(name_entry.get()))
         change_btn.pack(pady=5)
-        behavior_frame = ttk.LabelFrame(parent, text="Behavior Settings", padding=10)
+        behavior_frame = ttk.LabelFrame(content_frame, text="Behavior Settings", padding=10)
         behavior_frame.pack(fill=tk.X, padx=10, pady=10)
         always_on_top_var = tk.BooleanVar(value=self.pet_manager.settings.get('always_on_top', True))
         ttk.Checkbutton(behavior_frame, text="Always on top", variable=always_on_top_var,
@@ -215,14 +230,7 @@ class SimpleSettingsWindow:
         start_with_windows_var = tk.BooleanVar(value=self.startup_manager.is_enabled())
         ttk.Checkbutton(behavior_frame, text="Start with Windows", variable=start_with_windows_var,
                        command=lambda: self._toggle_startup(start_with_windows_var.get())).pack(anchor="w")
-        dnd_mode_var = tk.BooleanVar(value=self.pet_manager.settings.get('context_awareness_enabled', True))
-        dnd_checkbutton = ttk.Checkbutton(behavior_frame, text="DND-Mode", variable=dnd_mode_var,
-                                           command=lambda: self.pet_manager.update_setting('context_awareness_enabled', dnd_mode_var.get()))
-        dnd_checkbutton.pack(anchor="w", pady=(5, 0))
-        dnd_explanation = ttk.Label(behavior_frame, text="When enabled, the pet will move away from certain windows to avoid disturbing you.",
-                                    font=("Arial", 8), foreground=COLORS['text_light'])
-        dnd_explanation.pack(anchor="w", padx=(20, 0))
-        size_frame = ttk.LabelFrame(parent, text="Pet Size", padding=10)
+        size_frame = ttk.LabelFrame(content_frame, text="Pet Size", padding=10)
         size_frame.pack(fill=tk.X, padx=10, pady=10)
         size_var = tk.IntVar(value=self.pet_manager.settings['pet_size'])
         size_label_frame = ttk.Frame(size_frame)
@@ -237,7 +245,7 @@ class SimpleSettingsWindow:
             self.pet_manager.update_setting('pet_size', size_var.get())
         size_slider.bind("<Motion>", update_size_label)
         size_slider.bind("<ButtonRelease-1>", update_size_label)
-        speed_frame = ttk.LabelFrame(parent, text="Movement Speed", padding=10)
+        speed_frame = ttk.LabelFrame(content_frame, text="Movement Speed", padding=10)
         speed_frame.pack(fill=tk.X, padx=10, pady=10)
         speed_var = tk.IntVar(value=self.pet_manager.settings['movement_speed'])
         speed_label_frame = ttk.Frame(speed_frame)
@@ -252,7 +260,16 @@ class SimpleSettingsWindow:
             self.pet_manager.update_setting('movement_speed', speed_var.get())
         speed_slider.bind("<Motion>", update_speed_label)
         speed_slider.bind("<ButtonRelease-1>", update_speed_label)
-        credits_frame = ttk.LabelFrame(parent, text="About", padding=10)
+        context_awareness_frame = ttk.LabelFrame(content_frame, text="Context Awareness", padding=10)
+        context_awareness_frame.pack(fill=tk.X, padx=10, pady=10)
+        dnd_mode_var = tk.BooleanVar(value=self.pet_manager.settings.get('context_awareness_enabled', True))
+        dnd_checkbutton = ttk.Checkbutton(context_awareness_frame, text="DND-Mode", variable=dnd_mode_var,
+                                           command=lambda: self.pet_manager.update_setting('context_awareness_enabled', dnd_mode_var.get()))
+        dnd_checkbutton.pack(anchor="w", pady=(0, 5))
+        dnd_explanation = ttk.Label(context_awareness_frame, text="When enabled, the pet will move away from certain windows to avoid disturbing you.",
+                                    font=("Arial", 8), foreground=COLORS['text_light'])
+        dnd_explanation.pack(anchor="w", padx=(20, 0))
+        credits_frame = ttk.LabelFrame(content_frame, text="About", padding=10)
         credits_frame.pack(fill=tk.X, padx=10, pady=10)
         credits_btn = SimpleButton(credits_frame, text="Credits", command=self.show_credits)
         credits_btn.pack(pady=5)

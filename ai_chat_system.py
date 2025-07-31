@@ -29,10 +29,34 @@ AVAILABLE_MODELS = {
         'description': 'Fast and efficient latest generation',
         'context_window': '1M tokens'
     },
+    'gemini-1.5-pro': {
+        'name': 'Gemini 1.5 Pro',
+        'free': False,
+        'description': 'Advanced model with reasoning capabilities',
+        'context_window': '2M tokens'
+    },
     'gemini-1.5-flash': {
         'name': 'Gemini 1.5 Flash',
         'free': True,
         'description': 'Fast previous generation (free with limits)',
+        'context_window': '1M tokens'
+    },
+    'gemini-1.0-pro': {
+        'name': 'Gemini 1.0 Pro',
+        'free': False,
+        'description': 'Original Pro model',
+        'context_window': '32K tokens'
+    },
+    'gemini-1.5-pro-exp-0801': {
+        'name': 'Gemini 1.5 Pro Experimental',
+        'free': False,
+        'description': 'Experimental version of 1.5 Pro',
+        'context_window': '2M tokens'
+    },
+    'gemini-1.5-flash-exp-0801': {
+        'name': 'Gemini 1.5 Flash Experimental',
+        'free': True,
+        'description': 'Experimental version of 1.5 Flash',
         'context_window': '1M tokens'
     }
 }
@@ -276,8 +300,11 @@ class AIChatSystem:
             self.pet_manager.root.after(0, lambda: self.show_ai_response(ai_response))
         except Exception as e:
             import traceback
-            traceback.print_exc()
-            error_msg = self._get_friendly_error_message(str(e))
+            error_str = str(e)
+            # Only print traceback for unexpected errors, not for Ollama connection errors
+            if not ("ollama" in error_str.lower() and ("connect" in error_str.lower() or "connection" in error_str.lower())):
+                traceback.print_exc()
+            error_msg = self._get_friendly_error_message(error_str)
             self.pet_manager.root.after(0, lambda: self.show_ai_response(error_msg))
         finally:
             self.pet_manager.root.after(0, self.reset_typing_state)
@@ -366,6 +393,8 @@ class AIChatSystem:
             return "Oops! There seems to be an issue with the API key. Please check your settings."
         elif "model" in error_str.lower():
             return "Sorry! I'm having trouble with the AI model. Please try again or check your settings."
+        elif "ollama" in error_str.lower() and ("connect" in error_str.lower() or "connection" in error_str.lower()):
+            return "Ollama is not running."
         elif "network" in error_str.lower() or "connection" in error_str.lower():
             return "I can't connect to the AI service right now. Please check your internet connection."
         else:
@@ -649,7 +678,20 @@ class ChatProviderDialog:
             self.api_key_entry.insert(0, self.chat_system.api_key)
         ttk.Label(self.gemini_frame, text="Model:").pack(anchor='w')
         self.model_var = tk.StringVar(value=self.chat_system.selected_model)
-        self.gemini_model_menu = ttk.Combobox(self.gemini_frame, textvariable=self.model_var, values=list(AVAILABLE_MODELS.keys()), state="readonly")
+        # Create display names for models that include free/paid information
+        model_display_names = []
+        self.model_key_to_display = {}
+        self.model_display_to_key = {}
+        for model_key, model_info in AVAILABLE_MODELS.items():
+            display_name = f"{model_info['name']} ({'Free' if model_info['free'] else 'Paid'})"
+            model_display_names.append(display_name)
+            self.model_key_to_display[model_key] = display_name
+            self.model_display_to_key[display_name] = model_key
+        
+        # Set the initial display value
+        initial_display = self.model_key_to_display.get(self.chat_system.selected_model, self.chat_system.selected_model)
+        self.model_display_var = tk.StringVar(value=initial_display)
+        self.gemini_model_menu = ttk.Combobox(self.gemini_frame, textvariable=self.model_display_var, values=model_display_names, state="readonly")
         self.gemini_model_menu.pack(fill=tk.X, pady=5)
         self.ollama_frame = ttk.LabelFrame(content_frame, text="Ollama Settings", padding=10)
         self.ollama_frame.pack(fill=tk.X, pady=(0, 15))
@@ -694,6 +736,11 @@ class ChatProviderDialog:
                 child.config(state='normal')
             for child in self.ollama_frame.winfo_children():
                 child.config(state='disabled')
+            # Update the model dropdown with current selection
+            if hasattr(self, 'model_display_var') and hasattr(self, 'model_key_to_display'):
+                current_model = self.chat_system.selected_model
+                display_name = self.model_key_to_display.get(current_model, current_model)
+                self.model_display_var.set(display_name)
             instructions_text = """For Google Gemini:
 1. Go to https://makersuite.google.com/app/apikey
 2. Create an API key
@@ -741,7 +788,8 @@ class ChatProviderDialog:
             if not api_key:
                 messagebox.showerror("Error", "Please enter a Google Gemini API key.")
                 return
-            selected_model = self.model_var.get()
+            selected_model_display = self.model_display_var.get()
+            selected_model = self.model_display_to_key.get(selected_model_display, selected_model_display)
             if self.chat_system.save_settings(api_key=api_key, selected_model=selected_model,
                                             chat_provider='gemini'):
                 if self.chat_system.initialize_gemini_model():
