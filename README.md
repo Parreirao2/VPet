@@ -13,7 +13,7 @@
 ---
 
 <div align="center">
-  
+
 ![VPet Banner](img_assets/VPet_Demo.apng)
 
 </div>
@@ -30,8 +30,8 @@
 
 | **Baby** | **Child** | **Teen** | **Adult** | **Special** |
 |:--------:|:---------:|:--------:|:---------:|:-----------:|
-| ![Baby](frames/Baby_Happy.png) | ![Child](frames/Child_Happy.png) | ![Teen](frames/Teen_Happy.png) | ![Adult](frames/Adult_Happy.png) | ??? |
-| *Day 1-30* | *Day 31-60* | *Day 61-90* | *Day 91+* | *Secret* |
+| ![Baby](frames/Baby_Happy.png) | ![Child](frames/Child_Happy.png) | ![Teen](frames/Teen_Happy.png) | ![Adult](frames/Adult_Happy.png) | ![Special](frames/Special_Happy.png) |
+| *Day 1-30* | *Day 31-60* | *Day 61-90* | *Day 91+* | *Special Evo Spirit* |
 
 </div>
 
@@ -43,7 +43,7 @@
 - **🧠 Multiple AI Models**: 
   - **Google Gemini** (7 models: Pro, Flash, Lite)
   - **🆕 Ollama** (Local AI - no internet required!)
-- **🎯 Context-Aware**: Pet knows your apps and responds intelligently
+- **🎯 Context-Aware Positioning**: Pet intelligently avoids overlapping your active windows and responds to your applications
 - **💬 Natural Conversations**: Typewriter-style responses with personality
 - **🔒 Privacy-First**: Local Ollama models keep your data private
 - **🎭 Personality-Driven**: Responses adapt to your pet's mood and life stage
@@ -57,10 +57,14 @@
 - **🏆 Treasure Chests**: Hourly treasure spawns with valuable rewards
 
 ### 🏆 **Advanced Features**
-- **👁️ Context Awareness**: Pet monitors your apps and comments intelligently
+- **👁️ Context Awareness**:
+  - Monitors active applications and comments intelligently
+  - Avoids overlapping with active windows
+  - Adapts behavior based on user activity
 - **🎨 Customization**: Colors, sizes, transparency, behavior settings
 - **💾 Auto-Save**: Never lose progress with 5-minute auto-saves
 - **🖥️ Desktop Integration**: Always-on-top, multi-monitor support
+- **🧵 Multi-Threaded System Tray**: Runs in background without blocking main application
 - **🔄 Smart Evolution**: Natural aging or instant evolution items
 
 ---
@@ -112,6 +116,66 @@ python main.py
 4. **💬 Chat** with AI for social interaction
 5. **😴 Let rest** when energy is low
 6. **🏆 Find** treasure chests that spawn hourly
+
+---
+
+## 📊 **Pet Stat Mechanics**
+
+### ⚖️ **Core Stats**
+| Stat | Effect | Decay Rate |
+|------|--------|------------|
+| **Hunger** | Affects health when low | Baby: 0.15%/min → Adult: 0.35%/min |
+| **Happiness** | Impacts willingness to play | Baby: 0.1%/min → Adult: 0.3%/min |
+| **Energy** | Required for activities | Baby: 0.08%/min → Adult: 0.2%/min |
+| **Health** | Critical for survival | Doesn't decay |
+| **Cleanliness** | Prevents sickness | Baby: 0.1%/min → Adult: 0.25%/min |
+| **Social** | Affects chat engagement | Baby: 0.08%/min → Adult: 0.22%/min |
+
+### ⚠️ **Critical Thresholds**
+- **Health ≤30%**: Pet gets sick (loses 1% health/22-45s)
+- **Energy=0**: Pet falls asleep automatically
+- **Cleanliness≤30**: Higher poop chance
+- **Any stat=0**: Accelerates sickness
+
+---
+
+## 🤒 **Sickness System**
+
+### 🦠 **Causes**
+- Health ≤30% 
+- Any stat reaching 0%
+- Leaving poop uncleaned
+
+### 💊 **Treatment**
+1. Use **First Aid** item (+50% health)
+2. Use **Enchanted Apple** (full recovery)
+3. Keep cleanliness high
+
+### ⚠️ **Effects**
+- Continuous health drain
+- Reduced activity
+- Sad mood animations
+
+---
+
+## 🧹 **Poop Management**
+
+### 💩 **Mechanics**
+- **🍽️ Pressure-Based System**:
+  - Each food consumed adds "poop pressure" (0.5-2.0 points based on food type)
+  - Poop chance = (current hunger %) × (poop pressure / 10)
+  - Pressure resets after each poop
+
+### 🧻 **Cleaning**
+1. Click **Toilet Paper** in inventory
+2. Drag and drop on poop
+3. Each cleanup increases cleanliness by 15%
+
+### ⏳ **Consequences**
+- Poops older than 5 minutes:
+  - Reduce cleanliness by 3%
+  - Lower happiness by 0.5%
+  - Decrease health by 0.2%
 
 ---
 
@@ -227,6 +291,25 @@ Treasure chests spawn randomly every hour (20% chance) and disappear after 5 min
 
 ---
 
+## 🧠 **Context Awareness**
+
+VPet intelligently monitors your desktop activity to enhance interaction:
+
+### **Window Awareness**
+- Dynamically avoids overlapping with active application windows
+- Adjusts position based on foreground application focus
+- Stays visible without obstructing critical UI elements
+
+### **Application Monitoring**
+- Detects when you're using specific applications (browsers, IDEs, games)
+- Generates context-appropriate comments about your activities
+- Learns from your usage patterns over time
+
+### **Behavior Adaptation**
+- Reduces movement during focused work sessions
+- Increases interaction during idle periods
+- Adjusts notification frequency based on activity level
+
 ## 🏗️ **Technical Architecture**
 
 ### **Core Technologies**
@@ -246,12 +329,14 @@ VPet/
 ├── 📁 img_assets/           # Food, items, UI graphics
 ├── 🐍 main.py              # Application entry point
 ├── 🧠 ai_chat_system.py    # AI chat with Gemini & Ollama
+├── 👀 context_awareness.py # Context-aware window positioning
 ├── 🎮 game_hub.py          # Mini-games & currency
 ├── 💾 pet_components.py    # Core pet logic & stats
 ├── 🎬 pet_animation.py     # Animation & movement
 ├── 🛒 inventory_system.py  # Shop & items
 ├── 💰 currency_system.py   # Economy management
 ├── 🧹 poop_system.py       # Waste management & cleaning
+├── 🏆 treasure_system.py   # Treasure chest system
 ├── 💬 speech_bubble.py     # Pet communication system
 ├── 🖥️ system_tray.py      # System tray integration
 ├── ⚙️ unified_ui.py        # Modern UI components & settings
